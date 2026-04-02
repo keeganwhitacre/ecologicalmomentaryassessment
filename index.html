@@ -16,8 +16,6 @@
       --accent: #e05545;
       --accent-soft: rgba(224, 85, 69, 0.15);
       --accent-glow: rgba(224, 85, 69, 0.4);
-      --green: #3ddc84;
-      --blue: #5b8def;
       --radius: 12px;
       --font: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
       --font-mono: "SF Mono", ui-monospace, "Cascadia Code", monospace;
@@ -34,24 +32,21 @@
       -webkit-user-select: none; user-select: none;
     }
 
-    /* ---- Screen system ---- */
     .screen {
       position: absolute; inset: 0;
       display: flex; flex-direction: column;
-      padding: env(safe-area-inset-top, 20px) 24px env(safe-area-inset-bottom, 20px);
+      padding: calc(env(safe-area-inset-top, 20px) + 8px) 24px calc(env(safe-area-inset-bottom, 20px) + 8px);
       opacity: 0; pointer-events: none;
       transition: opacity 0.3s ease;
       overflow-y: auto;
     }
     .screen.active { opacity: 1; pointer-events: all; }
 
-    /* ---- Typography ---- */
     h1 { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 8px; }
     h2 { font-size: 1.1rem; font-weight: 500; color: var(--fg-muted); margin-bottom: 20px; }
     p { font-size: 0.95rem; line-height: 1.65; color: var(--fg); margin-bottom: 16px; }
     .label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg-muted); }
 
-    /* ---- Buttons ---- */
     .btn {
       display: inline-flex; align-items: center; justify-content: center;
       padding: 14px 32px; border-radius: var(--radius);
@@ -60,9 +55,7 @@
       transition: all 0.15s ease;
       -webkit-tap-highlight-color: transparent;
     }
-    .btn-primary {
-      background: var(--accent); color: #fff;
-    }
+    .btn-primary { background: var(--accent); color: #fff; }
     .btn-primary:active { transform: scale(0.97); }
     .btn-primary:disabled { opacity: 0.4; pointer-events: none; }
     .btn-outline {
@@ -71,74 +64,27 @@
     }
     .btn-outline:active { background: rgba(255,255,255,0.05); }
     .btn-outline.selected { border-color: var(--accent); background: var(--accent-soft); }
-
     .btn-block { width: 100%; }
     .spacer { flex: 1; }
 
     /* ---- Participant ID ---- */
-    #screen-participant {
-      justify-content: center; align-items: center; gap: 32px;
-    }
-    #screen-participant .logo {
-      font-size: 3rem; line-height: 1;
-    }
-    .input-group {
-      width: 100%; max-width: 320px;
-    }
+    #screen-participant { justify-content: center; align-items: center; gap: 32px; }
+    #screen-participant .logo { font-size: 3rem; line-height: 1; }
+    .input-group { width: 100%; max-width: 320px; }
     .input-group input {
       width: 100%; padding: 14px 16px;
       background: var(--bg-card); border: 1.5px solid rgba(255,255,255,0.1);
       border-radius: var(--radius); color: var(--fg);
-      font-family: var(--font); font-size: 1rem;
-      outline: none; transition: border-color 0.2s;
+      font-family: var(--font); font-size: 1rem; outline: none;
     }
     .input-group input:focus { border-color: var(--accent); }
     .input-group input::placeholder { color: var(--fg-muted); }
 
     /* ---- Onboarding ---- */
-    #screen-onboarding {
-      justify-content: center;
-    }
-    .onboarding-step {
-      display: none; flex-direction: column;
-      gap: 24px; height: 100%;
-    }
+    #screen-onboarding { justify-content: center; }
+    .onboarding-step { display: none; flex-direction: column; gap: 24px; height: 100%; }
     .onboarding-step.active { display: flex; }
     .onboarding-content { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-    .step-indicator {
-      display: flex; gap: 6px; justify-content: center; margin-bottom: 24px;
-    }
-    .step-dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: rgba(255,255,255,0.15);
-    }
-    .step-dot.active { background: var(--accent); }
-
-    /* ---- Baseline ---- */
-    #screen-baseline {
-      justify-content: center; align-items: center; gap: 24px;
-    }
-    .progress-ring {
-      width: 160px; height: 160px; position: relative;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .progress-ring svg {
-      position: absolute; inset: 0; transform: rotate(-90deg);
-    }
-    .progress-ring circle {
-      fill: none; stroke-width: 6;
-    }
-    .progress-ring .track { stroke: rgba(255,255,255,0.08); }
-    .progress-ring .fill {
-      stroke: var(--accent);
-      stroke-dasharray: 452;
-      stroke-dashoffset: 452;
-      stroke-linecap: round;
-      transition: stroke-dashoffset 1s linear;
-    }
-    .progress-text {
-      font-size: 2rem; font-weight: 600; font-family: var(--font-mono);
-    }
 
     /* ---- Finger overlay ---- */
     .finger-overlay {
@@ -153,7 +99,66 @@
     .finger-overlay .icon { font-size: 3rem; }
     .finger-overlay p { text-align: center; max-width: 280px; color: var(--fg-muted); }
 
-    /* ---- Trial screen ---- */
+    /* ---- Baseline ---- */
+    #screen-baseline { justify-content: space-between; align-items: center; gap: 12px; }
+
+    .baseline-top { text-align: center; }
+
+    .baseline-feedback {
+      display: flex; align-items: center; gap: 24px;
+      justify-content: center; width: 100%;
+    }
+    .baseline-bpm-box {
+      text-align: center;
+    }
+    .baseline-bpm-number {
+      font-size: 3rem; font-weight: 700; font-family: var(--font-mono);
+      color: var(--accent); line-height: 1;
+      transition: transform 0.1s ease;
+    }
+    .baseline-bpm-number.pulse {
+      animation: bpmPulse 0.3s ease-out;
+    }
+    @keyframes bpmPulse {
+      0% { transform: scale(1); }
+      30% { transform: scale(1.15); }
+      100% { transform: scale(1); }
+    }
+
+    .progress-ring {
+      width: 100px; height: 100px; position: relative; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .progress-ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+    .progress-ring circle { fill: none; stroke-width: 5; }
+    .progress-ring .track { stroke: rgba(255,255,255,0.08); }
+    .progress-ring .fill {
+      stroke: var(--accent); stroke-dasharray: 283; stroke-dashoffset: 283;
+      stroke-linecap: round; transition: stroke-dashoffset 1s linear;
+    }
+    .progress-text { font-size: 1.1rem; font-weight: 600; font-family: var(--font-mono); }
+
+    .baseline-stats {
+      display: flex; justify-content: center; gap: 32px;
+      width: 100%;
+    }
+    .baseline-stat { text-align: center; }
+    .baseline-stat-value { font-family: var(--font-mono); font-size: 1.1rem; color: var(--fg); }
+
+    .wave-container {
+      width: 100%; height: 80px;
+      background: rgba(255,255,255,0.03);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    #wave-canvas { width: 100%; height: 100%; display: block; }
+
+    .baseline-status {
+      font-size: 0.8rem; color: var(--fg-muted);
+      text-align: center; min-height: 1.2em;
+    }
+
+    /* ---- Trial ---- */
     #screen-trial {
       align-items: center; justify-content: space-between;
       padding-top: calc(env(safe-area-inset-top, 20px) + 12px);
@@ -165,68 +170,47 @@
       text-align: center; max-width: 300px; line-height: 1.5;
     }
 
-    /* Knob */
     .knob-container {
-      position: relative;
-      width: 220px; height: 220px;
+      position: relative; width: 220px; height: 220px;
       display: flex; align-items: center; justify-content: center;
     }
     #knob {
-      width: 200px; height: 200px;
-      border-radius: 50%;
+      width: 200px; height: 200px; border-radius: 50%;
       border: 2px solid rgba(255,255,255,0.12);
-      background: var(--bg-card);
-      touch-action: none;
-      position: relative;
+      background: var(--bg-card); touch-action: none; position: relative;
     }
-    #knob-dial {
-      position: absolute; inset: 0;
-      border-radius: 50%;
-    }
-    /* Tick marks rendered via CSS */
+    #knob-dial { position: absolute; inset: 0; border-radius: 50%; }
     #knob-dial::before {
-      content: "";
-      position: absolute;
-      top: 8px; left: 50%;
-      width: 3px; height: 18px;
-      background: var(--accent);
-      border-radius: 2px;
-      transform: translateX(-50%);
+      content: ""; position: absolute; top: 8px; left: 50%;
+      width: 3px; height: 18px; background: var(--accent);
+      border-radius: 2px; transform: translateX(-50%);
     }
-    /* Dot markers around edge */
-    .knob-ticks {
-      position: absolute; inset: -14px;
-      border-radius: 50%;
-    }
+    .knob-ticks { position: absolute; inset: -14px; border-radius: 50%; }
     .knob-tick {
-      position: absolute;
-      width: 2px; height: 6px;
+      position: absolute; width: 2px; height: 6px;
       background: rgba(255,255,255,0.15);
-      top: 0; left: 50%;
-      transform-origin: 50% calc(124px);
+      top: 0; left: 50%; transform-origin: 50% calc(124px);
     }
     .knob-label-left, .knob-label-right {
-      position: absolute; top: 50%;
-      font-size: 0.7rem; color: var(--fg-muted);
-      transform: translateY(-50%);
-      width: 50px; text-align: center;
+      position: absolute; top: 50%; font-size: 0.7rem; color: var(--fg-muted);
+      transform: translateY(-50%); width: 50px; text-align: center;
     }
     .knob-label-left { right: calc(100% + 8px); }
     .knob-label-right { left: calc(100% + 8px); }
 
-    .trial-bpm-display {
-      font-family: var(--font-mono);
-      font-size: 0.9rem; color: var(--fg-muted);
+    .trial-bpm-row {
+      display: flex; align-items: center; gap: 8px;
+      font-family: var(--font-mono); font-size: 0.9rem; color: var(--fg-muted);
     }
-    .trial-bpm-display span { color: var(--fg); font-size: 1.2rem; }
+    .trial-heart {
+      font-size: 1.2rem; transition: transform 0.1s ease;
+    }
+    .trial-heart.pulse { animation: bpmPulse 0.3s ease-out; }
+    .trial-bpm-row span { color: var(--fg); font-size: 1.2rem; }
 
     /* ---- Confidence ---- */
-    #screen-confidence {
-      justify-content: center; align-items: center; gap: 40px;
-    }
-    .slider-container {
-      width: 100%; max-width: 320px;
-    }
+    #screen-confidence { justify-content: center; align-items: center; gap: 40px; }
+    .slider-container { width: 100%; max-width: 320px; }
     input[type="range"] {
       -webkit-appearance: none; appearance: none;
       width: 100%; height: 6px;
@@ -245,14 +229,11 @@
       margin-top: 12px; font-size: 0.75rem; color: var(--fg-muted);
     }
     .confidence-value {
-      font-size: 3rem; font-weight: 600; font-family: var(--font-mono);
-      color: var(--accent);
+      font-size: 3rem; font-weight: 600; font-family: var(--font-mono); color: var(--accent);
     }
 
     /* ---- Body map ---- */
-    #screen-bodymap {
-      justify-content: center; align-items: center; gap: 16px;
-    }
+    #screen-bodymap { justify-content: center; align-items: center; gap: 16px; }
     .body-map-grid {
       display: grid; grid-template-columns: 1fr 1fr;
       gap: 8px; width: 100%; max-width: 320px;
@@ -260,37 +241,30 @@
     .body-part {
       padding: 14px; border-radius: var(--radius);
       background: var(--bg-card); border: 1.5px solid rgba(255,255,255,0.08);
-      color: var(--fg); font-size: 0.9rem;
-      cursor: pointer; text-align: center;
+      color: var(--fg); font-size: 0.9rem; cursor: pointer; text-align: center;
       transition: all 0.15s;
     }
     .body-part:active, .body-part.selected {
       border-color: var(--accent); background: var(--accent-soft);
     }
-    #bodymap-selected {
-      font-size: 0.85rem; color: var(--fg-muted); min-height: 1.2em;
-    }
+    #bodymap-selected { font-size: 0.85rem; color: var(--fg-muted); min-height: 1.2em; }
 
-    /* ---- End screen ---- */
-    #screen-end {
-      justify-content: center; align-items: center; gap: 24px;
-    }
+    /* ---- End ---- */
+    #screen-end { justify-content: center; align-items: center; gap: 24px; }
     #data-preview {
       font-family: var(--font-mono); font-size: 0.8rem;
       color: var(--fg-muted); text-align: center;
     }
 
-    /* ---- Hidden elements ---- */
+    /* Hidden camera elements */
     #video-feed, #sampling-canvas {
       position: fixed; top: -9999px; left: -9999px;
-      width: 40px; height: 40px;
-      opacity: 0; pointer-events: none;
+      width: 40px; height: 40px; opacity: 0; pointer-events: none;
     }
   </style>
 </head>
 <body>
 
-  <!-- Shared hidden camera elements -->
   <video id="video-feed" playsinline muted></video>
   <canvas id="sampling-canvas"></canvas>
 
@@ -310,7 +284,6 @@
 
   <!-- 2. Onboarding -->
   <div class="screen" id="screen-onboarding">
-
     <div class="onboarding-step" data-step="1">
       <div class="onboarding-content">
         <h1>How well can you match a sound with your heartbeat?</h1>
@@ -333,7 +306,7 @@
 
     <div class="onboarding-step" data-step="post-baseline">
       <div class="onboarding-content">
-        <h1>Baseline complete</h1>
+        <h1>Baseline complete ✓</h1>
         <p>In the main task, you'll hear a series of tones. Each tone represents one of your heartbeats — but it may be delayed or early.</p>
         <p>Your job is to rotate a dial until the tone feels <strong>in sync</strong> with your actual heartbeat.</p>
         <p>After each trial, you'll rate your confidence. Every 4th trial, you'll mark where on your body you felt your heartbeat.</p>
@@ -357,32 +330,47 @@
   <div class="screen" id="screen-baseline">
     <div class="finger-overlay" id="baseline-finger-overlay">
       <div class="icon">☝️</div>
-      <p>Place your finger over the camera and flashlight</p>
+      <p>Place your finger over the camera and flashlight to begin</p>
     </div>
 
-    <h1 style="text-align:center;">Recording baseline</h1>
-    <p class="label" style="text-align:center;">Keep your finger still</p>
-
-    <div class="spacer"></div>
-
-    <div class="progress-ring">
-      <svg viewBox="0 0 160 160">
-        <circle class="track" cx="80" cy="80" r="72"/>
-        <circle class="fill" id="baseline-progress-circle" cx="80" cy="80" r="72"/>
-      </svg>
-      <span class="progress-text" id="baseline-progress">0%</span>
+    <div class="baseline-top">
+      <h1>Recording baseline</h1>
+      <p class="label">Keep your finger still on the camera</p>
     </div>
 
-    <p style="text-align:center; margin-top:16px;">
-      <span class="label">Seconds remaining: </span>
-      <span id="baseline-secs" style="font-family:var(--font-mono);">120</span>
-    </p>
-    <p style="text-align:center;">
-      <span class="label">BPM: </span>
-      <span id="baseline-bpm" style="font-family:var(--font-mono); color:var(--accent);">--</span>
-    </p>
+    <div class="baseline-feedback">
+      <div class="baseline-bpm-box">
+        <div class="baseline-bpm-number" id="baseline-heart">
+          <span id="baseline-bpm">--</span>
+        </div>
+        <div class="label" style="margin-top:4px;">BPM</div>
+      </div>
 
-    <div class="spacer"></div>
+      <div class="progress-ring">
+        <svg viewBox="0 0 100 100">
+          <circle class="track" cx="50" cy="50" r="45"/>
+          <circle class="fill" id="baseline-progress-circle" cx="50" cy="50" r="45"/>
+        </svg>
+        <span class="progress-text" id="baseline-progress">0%</span>
+      </div>
+    </div>
+
+    <div class="wave-container">
+      <canvas id="wave-canvas"></canvas>
+    </div>
+
+    <div class="baseline-stats">
+      <div class="baseline-stat">
+        <div class="label">Seconds left</div>
+        <div class="baseline-stat-value" id="baseline-secs">120</div>
+      </div>
+      <div class="baseline-stat">
+        <div class="label">Beats detected</div>
+        <div class="baseline-stat-value" id="baseline-beat-count">0</div>
+      </div>
+    </div>
+
+    <p class="baseline-status" id="baseline-status">Waiting for finger...</p>
   </div>
 
   <!-- 4. Trial -->
@@ -409,7 +397,8 @@
       <div class="knob-label-right">Later ▶</div>
     </div>
 
-    <div class="trial-bpm-display">
+    <div class="trial-bpm-row">
+      <span class="trial-heart" id="trial-heart">♥</span>
       BPM: <span id="trial-bpm">--</span>
     </div>
 
@@ -418,40 +407,36 @@
     </button>
   </div>
 
-  <!-- 5. Confidence rating -->
+  <!-- 5. Confidence -->
   <div class="screen" id="screen-confidence">
+    <div class="spacer"></div>
     <h1 style="text-align:center;">Confidence</h1>
     <p style="text-align:center; color:var(--fg-muted);">
       How confident are you that the tone matched your heartbeat?
     </p>
-
-    <div class="confidence-value" id="confidence-value">5</div>
-
-    <div class="slider-container">
+    <div class="confidence-value" id="confidence-value" style="text-align:center;">5</div>
+    <div class="slider-container" style="margin:0 auto;">
       <input type="range" id="confidence-slider" min="0" max="9" step="1" value="5">
       <div class="slider-labels">
-        <span>Not at all confident</span>
-        <span>Extremely confident</span>
+        <span>Not at all</span>
+        <span>Extremely</span>
       </div>
     </div>
-
-    <button class="btn btn-primary btn-block" id="confirm-confidence-btn" disabled style="max-width:320px;">
+    <div class="spacer"></div>
+    <button class="btn btn-primary btn-block" id="confirm-confidence-btn" disabled style="max-width:320px; margin:0 auto;">
       Confirm
     </button>
   </div>
 
   <!-- 6. Body map -->
   <div class="screen" id="screen-bodymap">
+    <div class="spacer"></div>
     <h1 style="text-align:center;">Body Map</h1>
     <p style="text-align:center; color:var(--fg-muted); font-size:0.85rem;">
       Where did you feel your heartbeat?
     </p>
-
-    <button class="btn btn-outline btn-block" id="nowhere-btn" style="max-width:320px;">
-      Nowhere
-    </button>
-
-    <div class="body-map-grid">
+    <button class="btn btn-outline btn-block" id="nowhere-btn" style="max-width:320px; margin:0 auto 8px;">Nowhere</button>
+    <div class="body-map-grid" style="margin:0 auto;">
       <div class="body-part" data-value="1" data-name="chest">Chest</div>
       <div class="body-part" data-value="2" data-name="fingers">Fingers</div>
       <div class="body-part" data-value="3" data-name="neck">Neck</div>
@@ -460,20 +445,17 @@
       <div class="body-part" data-value="6" data-name="legs">Legs</div>
       <div class="body-part" data-value="7" data-name="head">Head</div>
     </div>
-
-    <p id="bodymap-selected"></p>
-
-    <button class="btn btn-primary btn-block" id="confirm-bodymap-btn" disabled style="max-width:320px;">
-      Confirm
-    </button>
+    <p id="bodymap-selected" style="text-align:center;"></p>
+    <div class="spacer"></div>
+    <button class="btn btn-primary btn-block" id="confirm-bodymap-btn" disabled style="max-width:320px; margin:0 auto;">Confirm</button>
   </div>
 
   <!-- 7. End -->
   <div class="screen" id="screen-end">
-    <div class="logo" style="font-size:3rem;">✅</div>
-    <h1>Task complete</h1>
+    <div style="font-size:3rem; text-align:center;">✅</div>
+    <h1 style="text-align:center;">Task complete</h1>
     <p id="data-preview"></p>
-    <button class="btn btn-primary btn-block" id="download-btn" style="max-width:320px;">
+    <button class="btn btn-primary btn-block" id="download-btn" style="max-width:320px; margin:0 auto;">
       Download data (JSON)
     </button>
     <p style="font-size:0.75rem; color:var(--fg-muted); text-align:center; margin-top:8px;">
@@ -481,41 +463,19 @@
     </p>
   </div>
 
-  <!-- Knob tick generation -->
   <script>
+    // Generate knob ticks
     (function() {
-      const container = document.getElementById('knob-ticks');
+      const c = document.getElementById('knob-ticks');
       for (let i = 0; i < 72; i++) {
-        const tick = document.createElement('div');
-        tick.className = 'knob-tick';
-        tick.style.transform = `rotate(${i * 5}deg)`;
-        if (i % 2 === 0) tick.style.height = '8px';
-        container.appendChild(tick);
+        const t = document.createElement('div');
+        t.className = 'knob-tick';
+        t.style.transform = `rotate(${i * 5}deg)`;
+        if (i % 2 === 0) t.style.height = '8px';
+        c.appendChild(t);
       }
     })();
   </script>
-
-  <!-- Baseline progress helper -->
-  <script>
-    // Override the progress text updater to also animate the SVG circle
-    const origSetInterval = window.setInterval;
-    const progressCircle = document.getElementById('baseline-progress-circle');
-    if (progressCircle) {
-      const circumference = 2 * Math.PI * 72; // r=72
-      const observer = new MutationObserver(() => {
-        const el = document.getElementById('baseline-progress');
-        if (el) {
-          const pct = parseFloat(el.textContent) / 100;
-          progressCircle.style.strokeDashoffset = circumference * (1 - pct);
-        }
-      });
-      const target = document.getElementById('baseline-progress');
-      if (target) {
-        observer.observe(target, { childList: true, characterData: true, subtree: true });
-      }
-    }
-  </script>
-
   <script src="app.js"></script>
 </body>
 </html>
