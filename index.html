@@ -129,14 +129,22 @@
       width: 100px; height: 100px; position: relative; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
     }
-    .progress-ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+    .progress-ring svg { position: absolute; inset: 0; transform: rotate(-90deg); z-index: 2; }
     .progress-ring circle { fill: none; stroke-width: 5; }
     .progress-ring .track { stroke: rgba(255,255,255,0.08); }
     .progress-ring .fill {
       stroke: var(--accent); stroke-dasharray: 283; stroke-dashoffset: 283;
       stroke-linecap: round; transition: stroke-dashoffset 1s linear;
     }
-    .progress-text { font-size: 1.1rem; font-weight: 600; font-family: var(--font-mono); }
+    .progress-text { font-size: 1.1rem; font-weight: 600; font-family: var(--font-mono); z-index: 3; }
+
+    .camera-preview {
+      position: absolute;
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      z-index: 1;
+      object-fit: cover;
+    }
 
     .baseline-stats {
       display: flex; justify-content: center; gap: 32px;
@@ -347,6 +355,7 @@
       </div>
 
       <div class="progress-ring">
+        <canvas id="camera-preview" class="camera-preview"></canvas>
         <svg viewBox="0 0 100 100">
           <circle class="track" cx="50" cy="50" r="45"/>
           <circle class="fill" id="baseline-progress-circle" cx="50" cy="50" r="45"/>

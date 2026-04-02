@@ -440,6 +440,13 @@ const UI = (function () {
     waveCanvas.width = waveCanvas.clientWidth * dpr;
     waveCanvas.height = waveCanvas.clientHeight * dpr;
 
+    // Camera preview inside the progress ring
+    const previewCanvas = document.getElementById("camera-preview");
+    const previewCtx = previewCanvas.getContext("2d");
+    const previewSize = 80 * dpr;
+    previewCanvas.width = previewSize;
+    previewCanvas.height = previewSize;
+
     videoEl = document.getElementById("video-feed");
     canvasEl = document.getElementById("sampling-canvas");
     let beatCount = 0;
@@ -464,6 +471,15 @@ const UI = (function () {
         waveBuffer.push(sample);
         if (waveBuffer.length > WAVE_MAX) waveBuffer.shift();
         drawWaveform();
+
+        // Update camera preview — draw video feed into circular canvas
+        previewCtx.save();
+        previewCtx.beginPath();
+        previewCtx.arc(previewSize / 2, previewSize / 2, previewSize / 2, 0, Math.PI * 2);
+        previewCtx.closePath();
+        previewCtx.clip();
+        previewCtx.drawImage(videoEl, 0, 0, previewSize, previewSize);
+        previewCtx.restore();
       },
     });
 
