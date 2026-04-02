@@ -7,8 +7,8 @@ const BeatDetector = (function () {
   const SAMPLE_RATE = 30;
   const IMAGE_SIZE = 40;
   const MIN_BPM = 40;
-  const MAX_BPM = 200;
-  const REFRACTORY_MS = (60 / MAX_BPM) * 1000;
+  const MAX_BPM = 120; // seated resting task — nobody's above 120
+  const REFRACTORY_MS = 500; // 500ms blanking rejects dicrotic notch double-triggers
   const BUFFER_SECONDS = 8;
   const BUFFER_SIZE = SAMPLE_RATE * BUFFER_SECONDS;
   const BASELINE_SECONDS = 2;
@@ -105,7 +105,8 @@ const BeatDetector = (function () {
       const slice = filteredBuffer.slice(-SAMPLE_RATE * 3);
       const sMax = Math.max(...slice), sMin = Math.min(...slice);
       const amplitude = sMax - sMin;
-      if (prev1 > sMin + amplitude * 0.4 && amplitude > 0.0005) return true;
+      // Threshold at 60% of amplitude — only the systolic peak passes, not the dicrotic notch
+      if (prev1 > sMin + amplitude * 0.6 && amplitude > 0.0005) return true;
     }
     return false;
   }
