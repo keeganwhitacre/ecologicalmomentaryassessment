@@ -708,6 +708,25 @@
       const urlTheme = urlParams.get('theme');
       if (urlTheme && THEMES[urlTheme]) applyTheme(urlTheme);
 
+      function collectDeviceMetadata() {
+        const ua = navigator.userAgent;
+        let deviceModel = 'Unknown', osName = 'Unknown', osVersion = '', browserName = 'Unknown', browserVersion = '';
+        if (/iPhone/.test(ua)) { deviceModel = 'iPhone'; osName = 'iOS'; const m = ua.match(/OS (\d+[_\.]\d+[_\.]?\d*)/); if (m) osVersion = m[1].replace(/_/g, '.'); }
+        else if (/iPad/.test(ua)) { deviceModel = 'iPad'; osName = 'iPadOS'; const m = ua.match(/OS (\d+[_\.]\d+[_\.]?\d*)/); if (m) osVersion = m[1].replace(/_/g, '.'); }
+        else if (/Android/.test(ua)) { osName = 'Android'; const m = ua.match(/Android ([\d.]+)/); if (m) osVersion = m[1]; const dm = ua.match(/;\s*([^;)]+)\s*Build\//); if (dm) deviceModel = dm[1].trim(); else deviceModel = 'Android Device'; }
+        else if (/Mac OS X/.test(ua)) { osName = 'macOS'; const m = ua.match(/Mac OS X ([\d_]+)/); if (m) osVersion = m[1].replace(/_/g, '.'); deviceModel = 'Mac'; }
+        else if (/Windows/.test(ua)) { osName = 'Windows'; const m = ua.match(/Windows NT ([\d.]+)/); if (m) osVersion = m[1]; deviceModel = 'PC'; }
+        else if (/Linux/.test(ua)) { osName = 'Linux'; deviceModel = 'PC'; }
+        if (/CriOS\/([\d.]+)/.test(ua)) { browserName = 'Chrome (iOS)'; browserVersion = ua.match(/CriOS\/([\d.]+)/)[1]; }
+        else if (/FxiOS\/([\d.]+)/.test(ua)) { browserName = 'Firefox (iOS)'; browserVersion = ua.match(/FxiOS\/([\d.]+)/)[1]; }
+        else if (/EdgiOS\/([\d.]+)/.test(ua)) { browserName = 'Edge (iOS)'; browserVersion = ua.match(/EdgiOS\/([\d.]+)/)[1]; }
+        else if (/Version\/([\d.]+).*Safari/.test(ua) && /Apple/.test(ua)) { browserName = 'Safari'; browserVersion = ua.match(/Version\/([\d.]+)/)[1]; }
+        else if (/Edg\/([\d.]+)/.test(ua)) { browserName = 'Edge'; browserVersion = ua.match(/Edg\/([\d.]+)/)[1]; }
+        else if (/Chrome\/([\d.]+)/.test(ua) && !/Edg/.test(ua)) { browserName = 'Chrome'; browserVersion = ua.match(/Chrome\/([\d.]+)/)[1]; }
+        else if (/Firefox\/([\d.]+)/.test(ua)) { browserName = 'Firefox'; browserVersion = ua.match(/Firefox\/([\d.]+)/)[1]; }
+        return { userAgent: ua, deviceModel, osName, osVersion, browserName, browserVersion, screenWidth: screen.width, screenHeight: screen.height, devicePixelRatio: window.devicePixelRatio || 1, touchSupport: 'ontouchstart' in window || navigator.maxTouchPoints > 0, platform: navigator.platform || '' };
+      }
+
       const onboardingData = {
         participantID: "",
         consentInitials: "",
@@ -715,6 +734,7 @@
         schedule: { availableDays: [], emaWindows: {}, },
         theme: chosenTheme,
         deviceChecks: {},
+        device: null,
         practiceBeats: 0,
         practiceMeanBPM: null,
         onboardingDate: null,
@@ -741,6 +761,7 @@
       welcomeBtn.disabled = !pidInput.value.trim();
       welcomeBtn.onclick = () => {
         onboardingData.participantID = pidInput.value.trim();
+        onboardingData.device = collectDeviceMetadata();
         show("screen-overview");
       };
 
