@@ -556,9 +556,70 @@
     // ONBOARDING APP
     // ============================================================
 
-    // Lightweight BeatDetector clone — same logic as main app
+    // WABP Onset Detector (shared algorithm)
+    const OnboardingWabp = (function () {
+      let SAMPLE_RATE, EYE_CLS_SAMPLES, SLP_WINDOW, NDP_SAMPLES, LPERIOD_SAMPLES, INIT_WINDOW;
+      const TM_FLOOR_RATIO = 0.05;
+      let slopeBuffer = [], slopeEnergyBuffer = [];
+      let sampleIndex = 0, learning = true, learningComplete = false;
+      let T0 = 0, Ta = 0, T1 = 0, Tm = 0;
+      let lastOnsetIndex = -Infinity, noDetectTimer = 0, prevSample = 0;
+
+      function reset(sampleRate) {
+        SAMPLE_RATE = sampleRate || 30;
+        EYE_CLS_SAMPLES = Math.round(0.25 * SAMPLE_RATE);
+        SLP_WINDOW = Math.max(2, Math.round(0.13 * SAMPLE_RATE));
+        NDP_SAMPLES = Math.round(2.5 * SAMPLE_RATE);
+        LPERIOD_SAMPLES = Math.round(8.0 * SAMPLE_RATE);
+        INIT_WINDOW = Math.round(8.0 * SAMPLE_RATE);
+        slopeBuffer = []; slopeEnergyBuffer = [];
+        sampleIndex = 0; learning = true; learningComplete = false;
+        T0 = 0; Ta = 0; T1 = 0; Tm = 0;
+        lastOnsetIndex = -Infinity; noDetectTimer = 0; prevSample = 0;
+      }
+      function processSample(filteredSample) {
+        sampleIndex++;
+        const dy = Math.max(0, filteredSample - prevSample); prevSample = filteredSample;
+        slopeBuffer.push(dy);
+        let slopeEnergy = 0;
+        const startIdx = Math.max(0, slopeBuffer.length - SLP_WINDOW);
+        for (let i = startIdx; i < slopeBuffer.length; i++) slopeEnergy += slopeBuffer[i];
+        slopeEnergyBuffer.push(slopeEnergy);
+        const MAX_BUF = SAMPLE_RATE * 10;
+        if (slopeBuffer.length > MAX_BUF) { slopeBuffer = slopeBuffer.slice(-MAX_BUF); slopeEnergyBuffer = slopeEnergyBuffer.slice(-MAX_BUF); }
+        if (learning) {
+          if (sampleIndex === INIT_WINDOW) { let sum = 0; for (let i = 0; i < slopeEnergyBuffer.length; i++) sum += slopeEnergyBuffer[i]; T0 = sum / slopeEnergyBuffer.length; Ta = 3 * T0; Tm = T0 * TM_FLOOR_RATIO; }
+          if (sampleIndex <= LPERIOD_SAMPLES) { T1 = 2 * T0; return { detected: false }; }
+          else { learning = false; learningComplete = true; T1 = Ta / 3; }
+        }
+        if (!learningComplete) return { detected: false };
+        if (sampleIndex - lastOnsetIndex < EYE_CLS_SAMPLES) return { detected: false };
+        if (slopeEnergy > T1) {
+          const seLen = slopeEnergyBuffer.length, halfEye = Math.floor(EYE_CLS_SAMPLES / 2);
+          if (seLen >= 3) {
+            const s0 = slopeEnergyBuffer[seLen-3], s1 = slopeEnergyBuffer[seLen-2], s2 = slopeEnergyBuffer[seLen-1];
+            if (s1 >= s0 && s1 >= s2 && s1 > T1) {
+              let maxVal = s1, minVal = s1;
+              for (let j = seLen-2; j >= Math.max(0, seLen-2-halfEye); j--) { if (slopeEnergyBuffer[j] > maxVal) maxVal = slopeEnergyBuffer[j]; if (slopeEnergyBuffer[j] < minVal) minVal = slopeEnergyBuffer[j]; }
+              if (maxVal > minVal * 1.5 + 1e-6) {
+                const onsetThresh = maxVal * 0.02; let onsetIdx = seLen - 2;
+                for (let j = seLen-2; j >= Math.max(0, seLen-2-halfEye); j--) { if (j > 0 && (slopeEnergyBuffer[j] - slopeEnergyBuffer[j-1]) < onsetThresh) { onsetIdx = j; break; } }
+                Ta += (maxVal - Ta) / 10; T1 = Ta / 3; lastOnsetIndex = sampleIndex; noDetectTimer = 0;
+                return { detected: true };
+              }
+            }
+          }
+        }
+        noDetectTimer++;
+        if (noDetectTimer > NDP_SAMPLES && Ta > Tm) { Ta -= Ta * 0.005; if (Ta < Tm) Ta = Tm; T1 = Ta / 3; }
+        return { detected: false };
+      }
+      return { reset, processSample };
+    })();
+
+    // Lightweight BeatDetector for onboarding (WABP onset, dynamic framerate, rVFC)
     const HWBeatDetector = (function () {
-      const IMAGE_SIZE = 40, SAMPLE_RATE = 30, REFRACTORY_MS = 500, BASELINE_S = 2, BUFFER_SIZE = SAMPLE_RATE * 8;
+      const IMAGE_SIZE = 40;
       const FINGER_BRIGHTNESS_MIN = 0.15, FINGER_BRIGHTNESS_MAX = 0.98, FINGER_RED_DOMINANCE = 0.38;
       const FINGER_DEBOUNCE_FRAMES = 8;
 
@@ -566,10 +627,14 @@
       let rawBuf = [], filteredBuf = [], timeBuf = [];
       let lastBeatTime = 0, startTime = 0, fingerPresent = false, fingerDebounce = 0;
       let recentPeriods = [], onBeat = null, onFingerChange = null, onPPGSample = null;
+      let actualFPS = 30;
       let hpState = { x1: 0, y1: 0 }, lpState = { y1: 0 };
-      const HP_A = 1 / (1 + (2 * Math.PI * 0.67) / SAMPLE_RATE);
-      const LP_A = (2 * Math.PI * 3.33 / SAMPLE_RATE) / (1 + (2 * Math.PI * 3.33) / SAMPLE_RATE);
+      let HP_A, LP_A;
 
+      function computeFilterCoeffs(sr) {
+        HP_A = 1 / (1 + (2 * Math.PI * 0.67) / sr);
+        LP_A = (2 * Math.PI * 3.33 / sr) / (1 + (2 * Math.PI * 3.33) / sr);
+      }
       function hp(x) { const y = HP_A * (hpState.y1 + x - hpState.x1); hpState.x1 = x; hpState.y1 = y; return y; }
       function lp(x) { const y = lpState.y1 + LP_A * (x - lpState.y1); lpState.y1 = y; return y; }
       function bp(x) { return lp(hp(x)); }
@@ -586,37 +651,33 @@
         return rM;
       }
 
-      function detectPeak() {
-        if (filteredBuf.length < 5) return false;
-        const now = Date.now();
-        if (now - lastBeatTime < REFRACTORY_MS || now - startTime < BASELINE_S * 1000) return false;
-        const len = filteredBuf.length;
-        const p2 = filteredBuf[len-3]||0, p1 = filteredBuf[len-2], c = filteredBuf[len-1];
-        if (p1 > p2 && p1 > c) {
-          const sl = filteredBuf.slice(-SAMPLE_RATE * 3);
-          const sMax = Math.max(...sl), sMin = Math.min(...sl), amp = sMax - sMin;
-          if (p1 > sMin + amp * 0.6 && amp > 0.0005) return true;
-        }
-        return false;
-      }
-
       function loop() {
         if (!running) return;
         const now = Date.now(), raw = extractRed(), filt = bp(raw);
+        const BUFFER_SIZE = Math.round(actualFPS * 8);
         rawBuf.push(raw); timeBuf.push(now); filteredBuf.push(filt);
         if (rawBuf.length > BUFFER_SIZE) { rawBuf.shift(); timeBuf.shift(); filteredBuf.shift(); }
         if (onPPGSample) onPPGSample(filt);
-        if (fingerPresent && detectPeak()) {
-          const beatTime = now - (1000/SAMPLE_RATE), interval = beatTime - lastBeatTime;
-          lastBeatTime = beatTime;
-          if (interval > 0 && interval < 1500) {
-            const ip = interval / 1000;
-            recentPeriods.push(ip); if (recentPeriods.length > 10) recentPeriods.shift();
-            const ap = recentPeriods.reduce((a,b) => a+b, 0) / recentPeriods.length;
-            if (onBeat) onBeat({ instantBPM: 60/ip, averageBPM: 60/ap, instantPeriod: ip, averagePeriod: ap, time: beatTime });
+
+        if (fingerPresent && (now - startTime > 2000)) {
+          const result = OnboardingWabp.processSample(filt);
+          if (result.detected) {
+            const beatTime = now - (1000/actualFPS), interval = beatTime - lastBeatTime;
+            lastBeatTime = beatTime;
+            if (interval > 0 && interval < 1500) {
+              const ip = interval / 1000;
+              recentPeriods.push(ip); if (recentPeriods.length > 10) recentPeriods.shift();
+              const ap = recentPeriods.reduce((a,b) => a+b, 0) / recentPeriods.length;
+              if (onBeat) onBeat({ instantBPM: 60/ip, averageBPM: 60/ap, instantPeriod: ip, averagePeriod: ap, time: beatTime });
+            }
           }
         }
-        animId = requestAnimationFrame(loop);
+
+        if ('requestVideoFrameCallback' in HTMLVideoElement.prototype) {
+          videoEl.requestVideoFrameCallback(() => loop());
+        } else {
+          animId = requestAnimationFrame(loop);
+        }
       }
 
       return {
@@ -627,9 +688,9 @@
           rawBuf = []; timeBuf = []; filteredBuf = []; recentPeriods = [];
           lastBeatTime = 0; fingerPresent = false; fingerDebounce = 0;
           hpState = { x1: 0, y1: 0 }; lpState = { y1: 0 };
-          // start camera
           if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
-          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" }, width: { ideal: IMAGE_SIZE }, height: { ideal: IMAGE_SIZE } } });
+          // Start camera with high framerate request
+          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" }, width: { ideal: IMAGE_SIZE }, height: { ideal: IMAGE_SIZE }, frameRate: { ideal: 120, min: 30 } } });
           try { const track = stream.getVideoTracks()[0]; await track.applyConstraints({ advanced: [{ torch: true }] }); } catch(e) {
             const devs = await navigator.mediaDevices.enumerateDevices();
             for (const cam of devs.filter(d => d.kind === "videoinput")) {
@@ -637,11 +698,19 @@
               if (l.includes("front") || l.includes("facetime")) continue;
               try {
                 stream.getTracks().forEach(t => t.stop());
-                stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: cam.deviceId }, width: { ideal: IMAGE_SIZE }, height: { ideal: IMAGE_SIZE } } });
+                stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: cam.deviceId }, width: { ideal: IMAGE_SIZE }, height: { ideal: IMAGE_SIZE }, frameRate: { ideal: 120, min: 30 } } });
                 try { await stream.getVideoTracks()[0].applyConstraints({ advanced: [{ torch: true }] }); break; } catch(e2) {}
               } catch(e3) {}
             }
           }
+          // Read actual framerate
+          if (stream) {
+            const settings = stream.getVideoTracks()[0].getSettings();
+            actualFPS = settings.frameRate || 30;
+            console.log(`[HWBeatDetector] Camera running at ${actualFPS} fps`);
+          }
+          computeFilterCoeffs(actualFPS);
+          OnboardingWabp.reset(actualFPS);
           videoEl.srcObject = stream; await videoEl.play();
           startTime = Date.now(); running = true; loop();
           return stream;
@@ -655,7 +724,8 @@
           if (videoEl) videoEl.srcObject = null;
         },
         getStream() { return stream; },
-        isFingerPresent() { return fingerPresent; }
+        isFingerPresent() { return fingerPresent; },
+        getActualFPS() { return actualFPS; }
       };
     })();
 

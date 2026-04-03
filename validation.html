@@ -249,11 +249,73 @@
     })();
 
     // ============================================================
-    // PPG BEAT DETECTOR
+    // WABP ONSET DETECTOR
+    // ============================================================
+    const WabpDetector = (function () {
+      let SAMPLE_RATE, EYE_CLS_SAMPLES, SLP_WINDOW, NDP_SAMPLES, LPERIOD_SAMPLES, INIT_WINDOW;
+      const TM_FLOOR_RATIO = 0.05;
+      let slopeBuffer = [], slopeEnergyBuffer = [];
+      let sampleIndex = 0, learning = true, learningComplete = false;
+      let T0 = 0, Ta = 0, T1 = 0, Tm = 0;
+      let lastOnsetIndex = -Infinity, noDetectTimer = 0, prevSample = 0;
+
+      function reset(sampleRate) {
+        SAMPLE_RATE = sampleRate || 30;
+        EYE_CLS_SAMPLES = Math.round(0.25 * SAMPLE_RATE);
+        SLP_WINDOW = Math.max(2, Math.round(0.13 * SAMPLE_RATE));
+        NDP_SAMPLES = Math.round(2.5 * SAMPLE_RATE);
+        LPERIOD_SAMPLES = Math.round(8.0 * SAMPLE_RATE);
+        INIT_WINDOW = Math.round(8.0 * SAMPLE_RATE);
+        slopeBuffer = []; slopeEnergyBuffer = [];
+        sampleIndex = 0; learning = true; learningComplete = false;
+        T0 = 0; Ta = 0; T1 = 0; Tm = 0;
+        lastOnsetIndex = -Infinity; noDetectTimer = 0; prevSample = 0;
+      }
+      function processSample(filteredSample) {
+        sampleIndex++;
+        const dy = Math.max(0, filteredSample - prevSample); prevSample = filteredSample;
+        slopeBuffer.push(dy);
+        let slopeEnergy = 0;
+        const startIdx = Math.max(0, slopeBuffer.length - SLP_WINDOW);
+        for (let i = startIdx; i < slopeBuffer.length; i++) slopeEnergy += slopeBuffer[i];
+        slopeEnergyBuffer.push(slopeEnergy);
+        const MAX_BUF = SAMPLE_RATE * 10;
+        if (slopeBuffer.length > MAX_BUF) { slopeBuffer = slopeBuffer.slice(-MAX_BUF); slopeEnergyBuffer = slopeEnergyBuffer.slice(-MAX_BUF); }
+        if (learning) {
+          if (sampleIndex === INIT_WINDOW) { let sum = 0; for (let i = 0; i < slopeEnergyBuffer.length; i++) sum += slopeEnergyBuffer[i]; T0 = sum / slopeEnergyBuffer.length; Ta = 3 * T0; Tm = T0 * TM_FLOOR_RATIO; }
+          if (sampleIndex <= LPERIOD_SAMPLES) { T1 = 2 * T0; return { detected: false }; }
+          else { learning = false; learningComplete = true; T1 = Ta / 3; }
+        }
+        if (!learningComplete) return { detected: false };
+        if (sampleIndex - lastOnsetIndex < EYE_CLS_SAMPLES) return { detected: false };
+        if (slopeEnergy > T1) {
+          const seLen = slopeEnergyBuffer.length, halfEye = Math.floor(EYE_CLS_SAMPLES / 2);
+          if (seLen >= 3) {
+            const s0 = slopeEnergyBuffer[seLen-3], s1 = slopeEnergyBuffer[seLen-2], s2 = slopeEnergyBuffer[seLen-1];
+            if (s1 >= s0 && s1 >= s2 && s1 > T1) {
+              let maxVal = s1, minVal = s1;
+              for (let j = seLen-2; j >= Math.max(0, seLen-2-halfEye); j--) { if (slopeEnergyBuffer[j] > maxVal) maxVal = slopeEnergyBuffer[j]; if (slopeEnergyBuffer[j] < minVal) minVal = slopeEnergyBuffer[j]; }
+              if (maxVal > minVal * 1.5 + 1e-6) {
+                const onsetThresh = maxVal * 0.02; let onsetIdx = seLen - 2;
+                for (let j = seLen-2; j >= Math.max(0, seLen-2-halfEye); j--) { if (j > 0 && (slopeEnergyBuffer[j] - slopeEnergyBuffer[j-1]) < onsetThresh) { onsetIdx = j; break; } }
+                Ta += (maxVal - Ta) / 10; T1 = Ta / 3; lastOnsetIndex = sampleIndex; noDetectTimer = 0;
+                return { detected: true, peakEnergy: maxVal };
+              }
+            }
+          }
+        }
+        noDetectTimer++;
+        if (noDetectTimer > NDP_SAMPLES && Ta > Tm) { Ta -= Ta * 0.005; if (Ta < Tm) Ta = Tm; T1 = Ta / 3; }
+        return { detected: false };
+      }
+      return { reset, processSample };
+    })();
+
+    // ============================================================
+    // PPG BEAT DETECTOR (WABP onset, dynamic framerate, rVFC loop)
     // ============================================================
     const BeatDetector = (function () {
-      const SAMPLE_RATE = 30, IMAGE_SIZE = 40, MIN_BPM = 40, REFRACTORY_MS = 500, BUFFER_SECONDS = 8;
-      const BUFFER_SIZE = SAMPLE_RATE * BUFFER_SECONDS, BASELINE_SECONDS = 2;
+      const IMAGE_SIZE = 40, MIN_BPM = 40, BUFFER_SECONDS = 8;
       const FINGER_BRIGHTNESS_MIN = 0.15, FINGER_BRIGHTNESS_MAX = 0.98, FINGER_RED_DOMINANCE = 0.38;
 
       let videoEl, canvasEl, ctx;
@@ -263,11 +325,14 @@
       let instantPeriod = 0, averagePeriod = 0, recentPeriods = [];
       const MAX_RECENT_PERIODS = 10;
       let onBeat = null, onFingerChange = null, onPPGSample = null;
+      let actualFPS = 30;
 
       let hpState = { x1: 0, y1: 0 }, lpState = { y1: 0 };
-      const HP_ALPHA = 1 / (1 + (2 * Math.PI * 0.67) / SAMPLE_RATE);
-      const LP_ALPHA = (2 * Math.PI * 3.33 / SAMPLE_RATE) / (1 + (2 * Math.PI * 3.33) / SAMPLE_RATE);
-
+      let HP_ALPHA, LP_ALPHA;
+      function computeFilterCoeffs(sr) {
+        HP_ALPHA = 1 / (1 + (2 * Math.PI * 0.67) / sr);
+        LP_ALPHA = (2 * Math.PI * 3.33 / sr) / (1 + (2 * Math.PI * 3.33) / sr);
+      }
       function highpass(x) { const y = HP_ALPHA * (hpState.y1 + x - hpState.x1); hpState.x1 = x; hpState.y1 = y; return y; }
       function lowpass(x) { const y = lpState.y1 + LP_ALPHA * (x - lpState.y1); lpState.y1 = y; return y; }
       function bandpass(x) { return lowpass(highpass(x)); }
@@ -282,139 +347,79 @@
         const rM = rS / count / 255, gM = gS / count / 255, bM = bS / count / 255;
         const brightness = (rM + gM + bM) / 3;
         const redRatio = rM / (rM + gM + bM + 0.001);
-
         const looksLikeFinger = brightness > FINGER_BRIGHTNESS_MIN && brightness < FINGER_BRIGHTNESS_MAX && redRatio > FINGER_RED_DOMINANCE;
         if (looksLikeFinger !== fingerPresent) {
           fingerDebounceCount++;
-          if (fingerDebounceCount >= FINGER_DEBOUNCE_FRAMES) {
-            fingerPresent = looksLikeFinger; fingerDebounceCount = 0;
-            if (onFingerChange) onFingerChange(fingerPresent);
-          }
+          if (fingerDebounceCount >= FINGER_DEBOUNCE_FRAMES) { fingerPresent = looksLikeFinger; fingerDebounceCount = 0; if (onFingerChange) onFingerChange(fingerPresent); }
         } else { fingerDebounceCount = 0; }
         return rM;
-      }
-
-      function detectPeak() {
-        if (filteredBuffer.length < 5) return false;
-        const now = performance.now();
-        if (now - lastBeatTime < REFRACTORY_MS || now - startTime < BASELINE_SECONDS * 1000) return false;
-
-        const len = filteredBuffer.length;
-        const prev2 = filteredBuffer[len - 3] || 0, prev1 = filteredBuffer[len - 2], curr = filteredBuffer[len - 1];
-
-        if (prev1 > prev2 && prev1 > curr) {
-          const slice = filteredBuffer.slice(-SAMPLE_RATE * 3);
-          const sMax = Math.max(...slice), sMin = Math.min(...slice), amplitude = sMax - sMin;
-          if (prev1 > sMin + amplitude * 0.6 && amplitude > 0.0005) return true;
-        }
-        return false;
       }
 
       function processFrame() {
         if (!running) return;
         const now = performance.now();
         const rawValue = extractRedMean(), filtered = bandpass(rawValue);
+        const BUFFER_SIZE = Math.round(actualFPS * BUFFER_SECONDS);
 
         rawBuffer.push(rawValue); timeBuffer.push(now); filteredBuffer.push(filtered);
         if (rawBuffer.length > BUFFER_SIZE) { rawBuffer.shift(); timeBuffer.shift(); filteredBuffer.shift(); }
         if (onPPGSample) onPPGSample(filtered);
 
-        if (fingerPresent && detectPeak()) {
-          const beatTime = now - (1000 / SAMPLE_RATE), interval = beatTime - lastBeatTime;
-          lastBeatTime = beatTime;
-
-          if (interval > 0 && interval < (60000 / MIN_BPM)) {
-            instantPeriod = interval / 1000;
-            const instantBPM = 60 / instantPeriod;
-            recentPeriods.push(instantPeriod);
-            if (recentPeriods.length > MAX_RECENT_PERIODS) recentPeriods.shift();
-            averagePeriod = recentPeriods.reduce((a, b) => a + b, 0) / recentPeriods.length;
-            const averageBPM = 60 / averagePeriod;
-            if (onBeat) onBeat({ instantBPM, averageBPM, instantPeriod, averagePeriod, time: beatTime });
+        if (fingerPresent && (now - startTime > 2000)) {
+          const result = WabpDetector.processSample(filtered);
+          if (result.detected) {
+            const beatTime = now - (1000 / actualFPS);
+            const interval = beatTime - lastBeatTime;
+            lastBeatTime = beatTime;
+            if (interval > 0 && interval < (60000 / MIN_BPM)) {
+              instantPeriod = interval / 1000;
+              const instantBPM = 60 / instantPeriod;
+              recentPeriods.push(instantPeriod);
+              if (recentPeriods.length > MAX_RECENT_PERIODS) recentPeriods.shift();
+              averagePeriod = recentPeriods.reduce((a, b) => a + b, 0) / recentPeriods.length;
+              const averageBPM = 60 / averagePeriod;
+              if (onBeat) onBeat({ instantBPM, averageBPM, instantPeriod, averagePeriod, time: beatTime });
+            }
           }
         }
-        animFrameId = requestAnimationFrame(processFrame);
+
+        if ('requestVideoFrameCallback' in HTMLVideoElement.prototype) {
+          videoEl.requestVideoFrameCallback(() => processFrame());
+        } else {
+          animFrameId = requestAnimationFrame(processFrame);
+        }
       }
 
-     async function startCamera() {
+      async function startCamera() {
         if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; }
-
-        // 1. Initial generic request to unlock device labels.
-        // If we don't do this first, iOS will return empty strings for camera labels.
-        try {
-          const tempStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-          tempStream.getTracks().forEach(t => t.stop());
-        } catch (e) { /* ignore and proceed */ }
-
-        // 2. Enumerate all available devices
+        try { const tempStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }); tempStream.getTracks().forEach(t => t.stop()); } catch (e) {}
         const devices = await navigator.mediaDevices.enumerateDevices();
         const cameras = devices.filter((d) => d.kind === "videoinput");
-
         let torchWorking = false;
-
-        // 3. Iterate through cameras to find a specific physical rear lens
         for (const cam of cameras) {
           const label = (cam.label || "").toLowerCase();
-          
-          // Skip front cameras
           if (label.includes("front") || label.includes("facetime")) continue;
-          
-          // CRITICAL FIX: Skip virtual multi-cameras on iOS ("Dual", "Triple").
-          // These virtual cameras cause the auto-macro lens switching.
-          // By targeting a single physical lens, we lock the focal and lighting system.
           if (label.includes("dual") || label.includes("triple")) continue;
-
           try {
             if (stream) stream.getTracks().forEach((t) => t.stop());
-            
-            // Request the specific physical lens by its exact Device ID
-            stream = await navigator.mediaDevices.getUserMedia({ 
-              video: { 
-                deviceId: { exact: cam.deviceId }, 
-                width: { ideal: IMAGE_SIZE }, 
-                height: { ideal: IMAGE_SIZE } 
-              } 
-            });
-            
+            stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: cam.deviceId }, width: { ideal: IMAGE_SIZE }, height: { ideal: IMAGE_SIZE }, frameRate: { ideal: 120, min: 30 } } });
             const track = stream.getVideoTracks()[0];
-            try { 
-              // Verify this specific lens supports the flashlight
-              await track.applyConstraints({ advanced: [{ torch: true }] }); 
-              torchWorking = true; 
-              break; // Success! We found a physical lens with a working torch. Stop looping.
-            } catch (err) {
-              // Torch failed on this specific lens, continue the loop to try the next one.
-            }
-          } catch (err) {
-            // Couldn't get stream for this camera, try the next one.
-          }
+            try { await track.applyConstraints({ advanced: [{ torch: true }] }); torchWorking = true; break; } catch (err) {}
+          } catch (err) {}
         }
-
-        // 4. Fallback in case the precise hardware targeting fails
         if (!torchWorking && !stream) {
-            try {
-              stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: { exact: "environment" }, width: { ideal: IMAGE_SIZE }, height: { ideal: IMAGE_SIZE } } 
-              });
-              const track = stream.getVideoTracks()[0];
-              try { await track.applyConstraints({ advanced: [{ torch: true }] }); } catch (e) {}
-            } catch(e) {
-               stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            }
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" }, width: { ideal: IMAGE_SIZE }, height: { ideal: IMAGE_SIZE }, frameRate: { ideal: 120, min: 30 } } });
+            const track = stream.getVideoTracks()[0];
+            try { await track.applyConstraints({ advanced: [{ torch: true }] }); } catch (e) {}
+          } catch(e) { stream = await navigator.mediaDevices.getUserMedia({ video: true }); }
         }
-
-        // 5. Attach stream to video element
-        if (videoEl && stream) {
-          videoEl.srcObject = stream; 
-          await videoEl.play();
-        }
+        if (stream) { const settings = stream.getVideoTracks()[0].getSettings(); actualFPS = settings.frameRate || 30; console.log(`[BeatDetector] Camera running at ${actualFPS} fps`); }
+        if (videoEl && stream) { videoEl.srcObject = stream; await videoEl.play(); }
       }
 
       async function stopCamera() {
-        if (stream) {
-          try { await stream.getVideoTracks()[0].applyConstraints({ advanced: [{ torch: false }] }); } catch (e) {}
-          stream.getTracks().forEach((t) => t.stop()); stream = null;
-        }
+        if (stream) { try { await stream.getVideoTracks()[0].applyConstraints({ advanced: [{ torch: false }] }); } catch (e) {} stream.getTracks().forEach((t) => t.stop()); stream = null; }
         if (videoEl) videoEl.srcObject = null;
       }
 
@@ -424,11 +429,14 @@
           canvasEl.width = IMAGE_SIZE; canvasEl.height = IMAGE_SIZE;
           onBeat = onBeatCb; onFingerChange = onFingerChangeCb; onPPGSample = onPPGSampleCb || null;
           rawBuffer = []; timeBuffer = []; filteredBuffer = []; recentPeriods = [];
-          lastBeatTime = 0; fingerPresent = false; fingerDebounceCount = 0; resetFilters();
+          lastBeatTime = 0; fingerPresent = false; fingerDebounceCount = 0;
           await startCamera();
+          computeFilterCoeffs(actualFPS); resetFilters();
+          WabpDetector.reset(actualFPS);
           startTime = performance.now(); running = true; processFrame();
         },
         async stop() { running = false; if (animFrameId) cancelAnimationFrame(animFrameId); await stopCamera(); },
+        getActualFPS() { return actualFPS; },
       };
     })();
 
