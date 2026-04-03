@@ -367,7 +367,7 @@
     <h1>Scheduling</h1>
     <p>Choose which days you're available and your preferred time windows for check-ins.</p>
 
-    <label class="label">Available days (select all that apply)</label>
+    <label class="label">Available days (select all that apply, must include a weekend)</label>
     <div class="day-grid" id="day-grid">
       <div class="day-btn selected" data-day="Mon">Mon</div>
       <div class="day-btn selected" data-day="Tue">Tue</div>
@@ -444,7 +444,7 @@
   <div class="screen" id="screen-device">
     <div class="progress-bar"><div class="progress-bar-fill" style="width: 57%;"></div></div>
     <h1>Device Check</h1>
-    <p>We'll test your phone's hardware to make sure it's compatible.</p>
+    <p>We'll test your phone's hardware. <strong>Note for multi-lens phones:</strong> The active camera is usually the one closest to the flashlight. You may need to adjust your finger to find the correct one.</p>
 
     <div class="check-list" id="check-list">
       <div class="check-item" id="check-camera">
@@ -482,7 +482,7 @@
         <rect x="5" y="2" width="14" height="20" rx="4" ry="4"/>
         <circle cx="12" cy="8" r="2" fill="var(--accent-red)" stroke="none"/>
       </svg>
-      <p style="text-align: center; color: #fff;">Place finger on camera now<br><span style="font-size: 0.9rem; color: var(--fg-muted);">Cover both lens and flash</span></p>
+      <p style="text-align: center; color: #fff;">Place finger on camera now<br><span style="font-size: 0.9rem; color: var(--fg-muted);">Cover the flashlight and the lens right next to it</span></p>
     </div>
 
     <p id="device-status" style="text-align: center; font-size: 0.9rem; min-height: 1.2em; margin-top: 12px;"></p>
@@ -506,7 +506,7 @@
         <rect x="5" y="2" width="14" height="20" rx="4" ry="4"/>
         <circle cx="12" cy="8" r="2" fill="var(--accent-red)" stroke="none"/>
       </svg>
-      <p style="text-align: center; color: #fff;">Place finger on camera<br><span style="font-size: 0.9rem; color: var(--fg-muted);">Keep still for accurate reading</span></p>
+      <p style="text-align: center; color: #fff;">Place finger on active camera<br><span style="font-size: 0.9rem; color: var(--fg-muted);">Cover lens and flashlight completely</span></p>
     </div>
 
     <div class="practice-area" id="practice-area">
@@ -784,6 +784,7 @@
           btn.classList.toggle("selected");
           const count = document.querySelectorAll(".day-btn.selected").length;
           const weeks = Math.ceil(14 / Math.max(1, count));
+          dayCountEl.style.color = "var(--fg-muted)"; // Reset color in case an error was showing
           dayCountEl.textContent = `${count} days selected — ~${weeks} weeks to collect 14 days of data`;
           if (count === 7) dayCountEl.textContent = "7 days selected — 14 days of data collection";
         };
@@ -797,6 +798,14 @@
       document.getElementById("schedule-next").onclick = () => {
         const selected = [...document.querySelectorAll(".day-btn.selected")].map(b => b.dataset.day);
         if (selected.length === 0) { dayCountEl.textContent = "Please select at least one day."; dayCountEl.style.color = "var(--accent-red)"; return; }
+        
+        const hasWeekend = selected.includes("Sat") || selected.includes("Sun");
+        if (!hasWeekend) { 
+          dayCountEl.textContent = "Please select at least one weekend day (Sat or Sun)."; 
+          dayCountEl.style.color = "var(--accent-red)"; 
+          return; 
+        }
+
         onboardingData.schedule.availableDays = selected;
         onboardingData.schedule.emaWindows = {
           morning: { start: document.getElementById("ema-am-start").value, end: document.getElementById("ema-am-end").value },
@@ -891,7 +900,7 @@
         // 4. PPG Signal — if torch is on, wait for finger
         if (checks.torch) {
           setCheckState("check-signal", "testing", "Place finger on camera...");
-          statusEl.textContent = "Place your finger on the camera to test PPG signal.";
+          statusEl.textContent = "Place your finger over the lit flashlight and the lens next to it.";
           document.getElementById("device-finger-overlay").classList.add("visible");
 
           await new Promise((resolve) => {
