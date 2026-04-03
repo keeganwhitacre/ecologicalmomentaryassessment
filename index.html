@@ -1076,8 +1076,15 @@
           secsEl.textContent = Math.ceil(remaining);
           document.getElementById("baseline-progress-circle").style.strokeDashoffset = circ * (1 - Math.min(1, elapsed / BASELINE_DURATION_S));
           if (remaining <= 0) {
-            clearInterval(baselineTimer); await BeatDetector.stop();
+            clearInterval(baselineTimer);
+            // DON'T stop the detector — preserve WABP calibrated thresholds and
+            // camera stream for the trial phase. Just null out the callbacks so
+            // beats aren't processed during the instruction screens.
+            BeatDetector.setCallbacks({ onBeatCb: null, onFingerChangeCb: null, onPPGSampleCb: null });
+            trialDetectorRunning = true; // so startTrial() uses setCallbacks instead of restart
             if (baselineBPMs.length < MIN_BASELINE_BEATS) {
+              // Baseline failed — DO stop and restart from scratch
+              await BeatDetector.stop(); trialDetectorRunning = false;
               statusEl.textContent = `Only ${baselineBPMs.length} beats detected (need ${MIN_BASELINE_BEATS}). Restarting...`;
               setTimeout(() => startBaseline(), 2000);
               return;
