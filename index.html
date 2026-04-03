@@ -8,15 +8,18 @@
   <link rel="manifest" href="manifest.json">
   <title>Phase Adjustment Task</title>
   <style>
+    /* --- Premium UI Design Tokens --- */
     :root {
-      --bg: #0a0a0f;
-      --bg-card: #14141f;
-      --fg: #e8e8f0;
-      --fg-muted: #6b6b80;
-      --accent: #e05545;
-      --accent-soft: rgba(224, 85, 69, 0.15);
-      --accent-glow: rgba(224, 85, 69, 0.4);
-      --radius: 12px;
+      --bg: #09090b;
+      --bg-card: rgba(39, 39, 42, 0.6);
+      --bg-card-hover: rgba(63, 63, 70, 0.8);
+      --border: rgba(255, 255, 255, 0.1);
+      --fg: #f4f4f5;
+      --fg-muted: #a1a1aa;
+      --accent: #fb7185;
+      --accent-soft: rgba(251, 113, 133, 0.15);
+      --accent-glow: rgba(251, 113, 133, 0.5);
+      --radius: 16px;
       --font: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
       --font-mono: "SF Mono", ui-monospace, "Cascadia Code", monospace;
     }
@@ -26,6 +29,7 @@
       height: 100%; width: 100%;
       font-family: var(--font);
       background: var(--bg);
+      background-image: radial-gradient(circle at 50% 0%, rgba(251,113,133,0.08) 0%, transparent 70%);
       color: var(--fg);
       overflow: hidden;
       touch-action: manipulation;
@@ -35,250 +39,215 @@
     .screen {
       position: absolute; inset: 0;
       display: flex; flex-direction: column;
-      padding: calc(env(safe-area-inset-top, 20px) + 8px) 24px calc(env(safe-area-inset-bottom, 20px) + 8px);
+      padding: calc(env(safe-area-inset-top, 24px) + 12px) 24px calc(env(safe-area-inset-bottom, 24px) + 12px);
       opacity: 0; pointer-events: none;
-      transition: opacity 0.3s ease;
+      transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
       overflow-y: auto;
     }
     .screen.active { opacity: 1; pointer-events: all; }
 
-    h1 { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 8px; }
-    h2 { font-size: 1.1rem; font-weight: 500; color: var(--fg-muted); margin-bottom: 20px; }
-    p { font-size: 0.95rem; line-height: 1.65; color: var(--fg); margin-bottom: 16px; }
-    .label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg-muted); }
+    h1 { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 8px; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+    h2 { font-size: 1.1rem; font-weight: 500; color: var(--fg-muted); margin-bottom: 24px; }
+    p { font-size: 1rem; line-height: 1.6; color: var(--fg); margin-bottom: 20px; }
+    .label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fg-muted); font-weight: 600; }
 
+    /* Glassmorphic Buttons */
     .btn {
       display: inline-flex; align-items: center; justify-content: center;
-      padding: 14px 32px; border-radius: var(--radius);
-      border: none; cursor: pointer;
-      font-family: var(--font); font-size: 1rem; font-weight: 500;
-      transition: all 0.15s ease;
+      padding: 16px 32px; border-radius: var(--radius);
+      border: 1px solid transparent; cursor: pointer;
+      font-family: var(--font); font-size: 1.05rem; font-weight: 600;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       -webkit-tap-highlight-color: transparent;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
     }
-    .btn-primary { background: var(--accent); color: #fff; }
-    .btn-primary:active { transform: scale(0.97); }
-    .btn-primary:disabled { opacity: 0.4; pointer-events: none; }
+    .btn-primary { 
+      background: linear-gradient(135deg, var(--accent), #e11d48); 
+      color: #fff; 
+      border-top-color: rgba(255,255,255,0.3);
+    }
+    .btn-primary:active { transform: scale(0.96); box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+    .btn-primary:disabled { opacity: 0.5; pointer-events: none; filter: grayscale(100%); }
+    
     .btn-outline {
-      background: transparent; color: var(--fg);
-      border: 1.5px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.03); color: var(--fg);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(10px);
     }
-    .btn-outline:active { background: rgba(255,255,255,0.05); }
-    .btn-outline.selected { border-color: var(--accent); background: var(--accent-soft); }
+    .btn-outline:active { background: rgba(255,255,255,0.08); }
+    .btn-outline.selected { 
+      border-color: var(--accent); background: var(--accent-soft); 
+      box-shadow: 0 0 15px var(--accent-glow);
+    }
     .btn-block { width: 100%; }
     .spacer { flex: 1; }
 
     /* ---- Participant ID ---- */
-    #screen-participant { justify-content: center; align-items: center; gap: 32px; }
-    #screen-participant .logo { font-size: 3rem; line-height: 1; }
-    .input-group { width: 100%; max-width: 320px; }
-    .input-group input {
-      width: 100%; padding: 14px 16px;
-      background: var(--bg-card); border: 1.5px solid rgba(255,255,255,0.1);
-      border-radius: var(--radius); color: var(--fg);
-      font-family: var(--font); font-size: 1rem; outline: none;
+    #screen-participant { justify-content: center; align-items: center; gap: 32px; text-align: center; }
+    #screen-participant .logo { 
+      font-size: 4rem; line-height: 1; 
+      filter: drop-shadow(0 0 20px var(--accent-glow));
+      animation: float 4s ease-in-out infinite;
     }
-    .input-group input:focus { border-color: var(--accent); }
-    .input-group input::placeholder { color: var(--fg-muted); }
+    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    
+    .input-group { width: 100%; max-width: 320px; text-align: left; }
+    .input-group input {
+      width: 100%; padding: 16px; margin-top: 8px;
+      background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--fg);
+      font-family: var(--font); font-size: 1.1rem; outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .input-group input:focus { 
+      border-color: var(--accent); 
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
 
     /* ---- Onboarding ---- */
     #screen-onboarding { justify-content: center; }
     .onboarding-step { display: none; flex-direction: column; gap: 24px; height: 100%; }
-    .onboarding-step.active { display: flex; }
+    .onboarding-step.active { display: flex; animation: slideUp 0.4s ease forwards; }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     .onboarding-content { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+    
+    .warning-box {
+      background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3);
+      padding: 16px; border-radius: var(--radius); margin-top: 16px;
+    }
+    .warning-box p { color: #fcd34d; margin-bottom: 0; font-size: 0.9rem; }
 
     /* ---- Finger overlay ---- */
     .finger-overlay {
       position: fixed; inset: 0; z-index: 100;
-      background: rgba(10, 10, 15, 0.92);
+      background: rgba(9, 9, 11, 0.95);
+      backdrop-filter: blur(10px);
       display: flex; flex-direction: column;
-      align-items: center; justify-content: center; gap: 16px;
+      align-items: center; justify-content: center; gap: 20px;
       opacity: 0; pointer-events: none;
-      transition: opacity 0.25s ease;
+      transition: opacity 0.3s ease;
     }
     .finger-overlay.visible { opacity: 1; pointer-events: all; }
-    .finger-overlay .icon { font-size: 3rem; }
-    .finger-overlay p { text-align: center; max-width: 280px; color: var(--fg-muted); }
+    .finger-overlay .icon { font-size: 4rem; animation: pulseFinger 1.5s infinite; }
+    @keyframes pulseFinger { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
 
     /* ---- Baseline ---- */
-    #screen-baseline { justify-content: space-between; align-items: center; gap: 12px; }
-
+    #screen-baseline { justify-content: space-between; align-items: center; gap: 16px; }
     .baseline-top { text-align: center; }
 
     .baseline-feedback {
-      display: flex; align-items: center; gap: 24px;
+      display: flex; align-items: center; gap: 32px;
       justify-content: center; width: 100%;
+      background: var(--bg-card); padding: 24px;
+      border-radius: 24px; border: 1px solid var(--border);
     }
-    .baseline-bpm-box {
-      text-align: center;
-    }
+    .baseline-bpm-box { text-align: center; }
     .baseline-bpm-number {
-      font-size: 3rem; font-weight: 700; font-family: var(--font-mono);
+      font-size: 3.5rem; font-weight: 700; font-family: var(--font-mono);
       color: var(--accent); line-height: 1;
-      transition: transform 0.1s ease;
+      text-shadow: 0 0 20px var(--accent-glow);
     }
-    .baseline-bpm-number.pulse {
-      animation: bpmPulse 0.3s ease-out;
-    }
-    @keyframes bpmPulse {
-      0% { transform: scale(1); }
-      30% { transform: scale(1.15); }
-      100% { transform: scale(1); }
-    }
+    .pulse-anim { animation: bpmPulse 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    @keyframes bpmPulse { 0% { transform: scale(1); } 30% { transform: scale(1.2); } 100% { transform: scale(1); } }
 
     .progress-ring {
-      width: 100px; height: 100px; position: relative; flex-shrink: 0;
+      width: 110px; height: 110px; position: relative; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
     }
     .progress-ring svg { position: absolute; inset: 0; transform: rotate(-90deg); z-index: 2; }
-    .progress-ring circle { fill: none; stroke-width: 5; }
-    .progress-ring .track { stroke: rgba(255,255,255,0.08); }
+    .progress-ring circle { fill: none; stroke-width: 6; }
+    .progress-ring .track { stroke: rgba(255,255,255,0.05); }
     .progress-ring .fill {
       stroke: var(--accent); stroke-dasharray: 283; stroke-dashoffset: 283;
       stroke-linecap: round; transition: stroke-dashoffset 1s linear;
+      filter: drop-shadow(0 0 5px var(--accent));
     }
-    .progress-text { font-size: 1.1rem; font-weight: 600; font-family: var(--font-mono); z-index: 3; }
+    .progress-text { font-size: 1.2rem; font-weight: 700; font-family: var(--font-mono); z-index: 3; }
 
     .camera-preview {
-      position: absolute;
-      width: 80px; height: 80px;
-      border-radius: 50%;
-      z-index: 1;
-      object-fit: cover;
+      position: absolute; width: 88px; height: 88px;
+      border-radius: 50%; z-index: 1; object-fit: cover; opacity: 0.6;
     }
-
-    .baseline-stats {
-      display: flex; justify-content: center; gap: 32px;
-      width: 100%;
-    }
-    .baseline-stat { text-align: center; }
-    .baseline-stat-value { font-family: var(--font-mono); font-size: 1.1rem; color: var(--fg); }
 
     .wave-container {
-      width: 100%; height: 80px;
-      background: rgba(255,255,255,0.03);
-      border-radius: var(--radius);
-      overflow: hidden;
+      width: 100%; height: 90px;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden; position: relative;
     }
-    #wave-canvas { width: 100%; height: 100%; display: block; }
+    #wave-canvas { width: 100%; height: 100%; display: block; filter: drop-shadow(0 0 4px var(--accent)); }
 
-    .baseline-status {
-      font-size: 0.8rem; color: var(--fg-muted);
-      text-align: center; min-height: 1.2em;
+    .baseline-stats {
+      display: flex; justify-content: space-around; width: 100%;
+      background: var(--bg-card); padding: 16px; border-radius: var(--radius); border: 1px solid var(--border);
     }
+    .baseline-stat { text-align: center; }
+    .baseline-stat-value { font-family: var(--font-mono); font-size: 1.4rem; color: var(--fg); font-weight: 600; margin-top: 4px; }
+    .baseline-status { font-size: 0.85rem; color: var(--fg-muted); text-align: center; min-height: 1.2em; font-weight: 500;}
 
-    /* ---- Trial ---- */
-    #screen-trial {
-      align-items: center; justify-content: space-between;
-      padding-top: calc(env(safe-area-inset-top, 20px) + 12px);
-      padding-bottom: calc(env(safe-area-inset-bottom, 20px) + 12px);
-    }
-    .trial-header { text-align: center; }
-    .trial-instruction {
-      font-size: 0.85rem; color: var(--fg-muted);
-      text-align: center; max-width: 300px; line-height: 1.5;
-    }
+    /* ---- Trial (Redesigned Slider) ---- */
+    #screen-trial { align-items: center; justify-content: space-between; }
+    .trial-header { text-align: center; margin-bottom: 20px;}
+    .trial-instruction { font-size: 1.05rem; color: var(--fg); text-align: center; max-width: 320px; line-height: 1.5; margin-bottom: 40px; }
 
-    .knob-container {
-      position: relative; width: 220px; height: 220px;
-      display: flex; align-items: center; justify-content: center;
+    /* The New Phase Adjustment Slider */
+    .phase-adjustment-container {
+      width: 100%; max-width: 340px; margin: 20px 0 40px 0;
+      padding: 30px 20px; background: var(--bg-card);
+      border-radius: 24px; border: 1px solid var(--border);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     }
-    #knob {
-      width: 200px; height: 200px; border-radius: 50%;
-      border: 2px solid rgba(255,255,255,0.12);
-      background: var(--bg-card); touch-action: none; position: relative;
+    
+    .phase-slider {
+      -webkit-appearance: none; width: 100%; height: 8px;
+      border-radius: 4px; outline: none;
+      background: linear-gradient(90deg, rgba(255,255,255,0.1), rgba(255,255,255,0.3), rgba(255,255,255,0.1));
+      position: relative; margin-bottom: 20px;
     }
-    #knob-dial { position: absolute; inset: 0; border-radius: 50%; }
-    #knob-dial::before {
-      content: ""; position: absolute; top: 8px; left: 50%;
-      width: 3px; height: 18px; background: var(--accent);
-      border-radius: 2px; transform: translateX(-50%);
+    
+    .phase-slider::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 44px; height: 44px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--fg), #d4d4d8);
+      cursor: pointer; border: 4px solid var(--bg);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 0 2px var(--accent-soft);
+      transition: transform 0.1s;
     }
-    .knob-ticks { position: absolute; inset: -14px; border-radius: 50%; }
-    .knob-tick {
-      position: absolute; width: 2px; height: 6px;
-      background: rgba(255,255,255,0.15);
-      top: 0; left: 50%; transform-origin: 50% calc(124px);
-    }
-    .knob-label-left, .knob-label-right {
-      position: absolute; top: 50%; font-size: 0.7rem; color: var(--fg-muted);
-      transform: translateY(-50%); width: 50px; text-align: center;
-    }
-    .knob-label-left { right: calc(100% + 8px); }
-    .knob-label-right { left: calc(100% + 8px); }
+    .phase-slider::-webkit-slider-thumb:active { transform: scale(1.1); box-shadow: 0 4px 15px rgba(0,0,0,0.6), 0 0 0 4px var(--accent-glow); }
+    
+    .slider-labels { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--fg-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
 
-    .trial-bpm-row {
-      display: flex; align-items: center; gap: 8px;
-      font-family: var(--font-mono); font-size: 0.9rem; color: var(--fg-muted);
-    }
-    .trial-heart {
-      font-size: 1.2rem; transition: transform 0.1s ease;
-    }
-    .trial-heart.pulse { animation: bpmPulse 0.3s ease-out; }
-    .trial-bpm-row span { color: var(--fg); font-size: 1.2rem; }
+    .trial-bpm-row { display: flex; align-items: center; gap: 10px; font-family: var(--font-mono); font-size: 1rem; color: var(--fg-muted); background: rgba(0,0,0,0.4); padding: 10px 20px; border-radius: 30px; margin-bottom: 20px; border: 1px solid var(--border);}
+    .trial-heart { font-size: 1.4rem; color: var(--accent); }
+    .trial-bpm-row span.bpm-val { color: var(--fg); font-size: 1.3rem; font-weight: 600;}
 
     .movement-warning {
-      position: fixed; top: calc(env(safe-area-inset-top, 20px) + 8px);
+      position: fixed; top: calc(env(safe-area-inset-top, 24px) + 10px);
       left: 50%; transform: translateX(-50%) translateY(-60px);
-      background: rgba(255, 160, 40, 0.9); color: #000;
-      padding: 8px 20px; border-radius: 20px;
-      font-size: 0.8rem; font-weight: 600;
+      background: #f59e0b; color: #000;
+      padding: 10px 24px; border-radius: 30px;
+      font-size: 0.9rem; font-weight: 700;
       z-index: 50; pointer-events: none;
-      opacity: 0; transition: all 0.3s ease;
-      white-space: nowrap;
+      opacity: 0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 20px rgba(245, 158, 11, 0.4);
     }
-    .movement-warning.visible {
-      opacity: 1; transform: translateX(-50%) translateY(0);
-    }
-
-    /* ---- Confidence ---- */
-    #screen-confidence { justify-content: center; align-items: center; gap: 40px; }
-    .slider-container { width: 100%; max-width: 320px; }
-    input[type="range"] {
-      -webkit-appearance: none; appearance: none;
-      width: 100%; height: 6px;
-      background: rgba(255,255,255,0.1);
-      border-radius: 3px; outline: none;
-    }
-    input[type="range"]::-webkit-slider-thumb {
-      -webkit-appearance: none; appearance: none;
-      width: 28px; height: 28px;
-      background: var(--accent); border-radius: 50%;
-      cursor: pointer; border: 3px solid var(--bg);
-      box-shadow: 0 0 12px var(--accent-glow);
-    }
-    .slider-labels {
-      display: flex; justify-content: space-between;
-      margin-top: 12px; font-size: 0.75rem; color: var(--fg-muted);
-    }
-    .confidence-value {
-      font-size: 3rem; font-weight: 600; font-family: var(--font-mono); color: var(--accent);
-    }
+    .movement-warning.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
 
     /* ---- Body map ---- */
     #screen-bodymap { justify-content: center; align-items: center; gap: 16px; }
-    .body-map-grid {
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: 8px; width: 100%; max-width: 320px;
-    }
+    .body-map-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; max-width: 320px; }
     .body-part {
-      padding: 14px; border-radius: var(--radius);
-      background: var(--bg-card); border: 1.5px solid rgba(255,255,255,0.08);
-      color: var(--fg); font-size: 0.9rem; cursor: pointer; text-align: center;
-      transition: all 0.15s;
+      padding: 16px; border-radius: var(--radius);
+      background: var(--bg-card); border: 1px solid var(--border);
+      color: var(--fg); font-size: 1rem; cursor: pointer; text-align: center;
+      transition: all 0.2s; font-weight: 500;
     }
     .body-part:active, .body-part.selected {
       border-color: var(--accent); background: var(--accent-soft);
+      box-shadow: 0 0 15px var(--accent-glow); transform: scale(0.98);
     }
-    #bodymap-selected { font-size: 0.85rem; color: var(--fg-muted); min-height: 1.2em; }
+    #bodymap-selected { font-size: 0.9rem; color: var(--accent); min-height: 1.2em; font-weight: 600; margin-top: 8px;}
 
-    /* ---- End ---- */
-    #screen-end { justify-content: center; align-items: center; gap: 24px; }
-    #data-preview {
-      font-family: var(--font-mono); font-size: 0.8rem;
-      color: var(--fg-muted); text-align: center;
-    }
-
-    /* Hidden camera elements */
+    /* ---- Hidden camera ---- */
     #video-feed, #sampling-canvas {
       position: fixed; top: -9999px; left: -9999px;
       width: 40px; height: 40px; opacity: 0; pointer-events: none;
@@ -291,9 +260,9 @@
   <canvas id="sampling-canvas"></canvas>
 
   <!-- 1. Participant ID -->
-  <div class="screen" id="screen-participant">
+  <div class="screen active" id="screen-participant">
     <div class="logo">💓</div>
-    <div style="text-align:center;">
+    <div>
       <h1>Phase Adjustment Task</h1>
       <h2>Cardiac Interoception</h2>
     </div>
@@ -301,27 +270,30 @@
       <label class="label" for="participant-input">Participant ID</label>
       <input type="text" id="participant-input" placeholder="Enter ID..." autocomplete="off">
     </div>
-    <button class="btn btn-primary btn-block" id="start-btn" style="max-width:320px;">Begin</button>
+    <button class="btn btn-primary btn-block" id="start-btn" style="max-width:320px;">Begin Protocol</button>
   </div>
 
   <!-- 2. Onboarding -->
   <div class="screen" id="screen-onboarding">
     <div class="onboarding-step" data-step="1">
       <div class="onboarding-content">
-        <h1>How well can you match a sound with your heartbeat?</h1>
-        <p>Let's find out!</p>
-        <p>Find a quiet place where you can sit comfortably with earphones for about 10 minutes.</p>
-        <p>We'll begin by capturing a couple of minutes of your heart rate to get a baseline reading.</p>
+        <h1>Audio Setup</h1>
+        <p>This task requires precision timing to match a sound with your heartbeat.</p>
+        <div class="warning-box">
+          <p><strong>⚠️ Crucial: Do not use Bluetooth headphones.</strong></p>
+          <p style="margin-top:8px; color: var(--fg);">Wireless headphones (like AirPods) introduce an audio delay that invalidates the data.</p>
+        </div>
+        <p style="margin-top: 24px;">Please use <strong>wired earphones</strong> or your phone's <strong>built-in external speaker</strong> in a quiet room.</p>
       </div>
-      <button class="btn btn-primary btn-block" data-next-step="2">Continue</button>
+      <button class="btn btn-primary btn-block" data-next-step="2">I'm using wired/built-in audio</button>
     </div>
 
     <div class="onboarding-step" data-step="2">
       <div class="onboarding-content">
         <h1>Getting ready</h1>
-        <p>Place the tip of your index finger over both the <strong>camera</strong> and <strong>flashlight</strong> on the back of your phone.</p>
-        <p>Keep your finger still — even small movements can disrupt the reading.</p>
-        <p>The flashlight will turn on so the camera can detect your pulse through your fingertip.</p>
+        <p>Place the tip of your index finger gently over both the <strong>camera</strong> and <strong>flashlight</strong> on the back of your phone.</p>
+        <p>Keep your finger perfectly still — even small movements disrupt the reading.</p>
+        <p>The flashlight will turn on automatically to detect your pulse.</p>
       </div>
       <button class="btn btn-primary btn-block" data-next-step="baseline">Start baseline recording</button>
     </div>
@@ -329,9 +301,8 @@
     <div class="onboarding-step" data-step="post-baseline">
       <div class="onboarding-content">
         <h1>Baseline complete ✓</h1>
-        <p>In the main task, you'll hear a series of tones. Each tone represents one of your heartbeats — but it may be delayed or early.</p>
-        <p>Your job is to rotate a dial until the tone feels <strong>in sync</strong> with your actual heartbeat.</p>
-        <p>After each trial, you'll rate your confidence. Every 4th trial, you'll mark where on your body you felt your heartbeat.</p>
+        <p>In the main task, you'll hear a series of tones. Each tone represents one of your heartbeats — but it may be artificially delayed or early.</p>
+        <p>Your job is to drag the slider until the tone feels perfectly <strong>in sync</strong> with your actual heartbeat.</p>
       </div>
       <button class="btn btn-primary btn-block" data-next-step="3">Continue</button>
     </div>
@@ -339,10 +310,9 @@
     <div class="onboarding-step" data-step="3">
       <div class="onboarding-content">
         <h1>Important</h1>
-        <p>Do <strong>not</strong> actively try to feel your pulse with your hand — we're only interested in what you naturally feel.</p>
-        <p>Keep your finger on the camera throughout each trial.</p>
-        <p>You'll start with 2 practice trials, then 20 real trials.</p>
-        <p>Sit comfortably upright with your earphones on and press "Start" when ready.</p>
+        <p>Do <strong>not</strong> actively try to feel your pulse with your other hand. We are measuring your natural internal perception.</p>
+        <p>Keep your finger steadily on the camera throughout the entire trial block.</p>
+        <p>You'll start with 2 practice trials.</p>
       </div>
       <button class="btn btn-primary btn-block" data-next-step="start-trials">Start practice trials</button>
     </div>
@@ -352,12 +322,12 @@
   <div class="screen" id="screen-baseline">
     <div class="finger-overlay" id="baseline-finger-overlay">
       <div class="icon">☝️</div>
-      <p>Place your finger over the camera and flashlight to begin</p>
+      <p style="text-align: center; font-size: 1.1rem; color: #fff;">Place your finger over the camera<br><span style="font-size: 0.9rem; color: var(--fg-muted);">Cover both the lens and flash</span></p>
     </div>
 
     <div class="baseline-top">
-      <h1>Recording baseline</h1>
-      <p class="label">Keep your finger still on the camera</p>
+      <h1>Recording Baseline</h1>
+      <p class="label">Keep your finger still</p>
     </div>
 
     <div class="baseline-feedback">
@@ -365,7 +335,7 @@
         <div class="baseline-bpm-number" id="baseline-heart">
           <span id="baseline-bpm">--</span>
         </div>
-        <div class="label" style="margin-top:4px;">BPM</div>
+        <div class="label" style="margin-top:8px;">BPM</div>
       </div>
 
       <div class="progress-ring">
@@ -384,11 +354,11 @@
 
     <div class="baseline-stats">
       <div class="baseline-stat">
-        <div class="label">Seconds left</div>
-        <div class="baseline-stat-value" id="baseline-secs">120</div>
+        <div class="label">Time Left</div>
+        <div class="baseline-stat-value"><span id="baseline-secs">120</span>s</div>
       </div>
       <div class="baseline-stat">
-        <div class="label">Beats detected</div>
+        <div class="label">Beats</div>
         <div class="baseline-stat-value" id="baseline-beat-count">0</div>
       </div>
     </div>
@@ -400,7 +370,7 @@
   <div class="screen" id="screen-trial">
     <div class="finger-overlay" id="trial-finger-overlay">
       <div class="icon">☝️</div>
-      <p>Place your finger over the camera and flashlight</p>
+      <p style="text-align: center; color: #fff;">Place your finger back over the camera</p>
     </div>
 
     <div class="movement-warning" id="trial-movement-warning">
@@ -408,29 +378,28 @@
     </div>
 
     <div class="trial-header">
-      <p class="label" id="trial-label">TRIAL 1</p>
+      <p class="label" id="trial-label" style="color: var(--accent);">TRIAL 1</p>
     </div>
 
     <p class="trial-instruction">
-      Move the dial until the tone matches your heartbeat, to the best of your perception.
+      Drag the slider until the tone matches your heartbeat.
     </p>
 
-    <div class="knob-container">
-      <div class="knob-label-left">◀ Earlier</div>
-      <div id="knob">
-        <div id="knob-dial"></div>
-        <div class="knob-ticks" id="knob-ticks"></div>
+    <div class="phase-adjustment-container">
+      <input type="range" class="phase-slider" id="phase-slider" min="-1" max="1" step="0.001" value="0">
+      <div class="slider-labels">
+        <span>◀ Earlier</span>
+        <span>Later ▶</span>
       </div>
-      <div class="knob-label-right">Later ▶</div>
     </div>
 
     <div class="trial-bpm-row">
       <span class="trial-heart" id="trial-heart">♥</span>
-      BPM: <span id="trial-bpm">--</span>
+      BPM: <span class="bpm-val" id="trial-bpm">--</span>
     </div>
 
-    <button class="btn btn-primary btn-block" id="confirm-trial-btn" disabled style="max-width:320px;">
-      Confirm
+    <button class="btn btn-primary btn-block" id="confirm-trial-btn" disabled style="max-width:340px;">
+      Confirm Timing
     </button>
   </div>
 
@@ -439,19 +408,21 @@
     <div class="spacer"></div>
     <h1 style="text-align:center;">Confidence</h1>
     <p style="text-align:center; color:var(--fg-muted);">
-      How confident are you that the tone matched your heartbeat?
+      How confident are you that the tone perfectly matched your heartbeat?
     </p>
-    <div class="confidence-value" id="confidence-value" style="text-align:center;">5</div>
-    <div class="slider-container" style="margin:0 auto;">
-      <input type="range" id="confidence-slider" min="0" max="9" step="1" value="5">
-      <div class="slider-labels">
+    
+    <div class="phase-adjustment-container" style="background: transparent; box-shadow: none; border: none; margin: 0 auto;">
+      <div style="font-size: 4rem; font-weight: 700; font-family: var(--font-mono); color: var(--accent); text-align: center; margin-bottom: 20px; text-shadow: 0 0 20px var(--accent-glow);" id="confidence-value">5</div>
+      <input type="range" class="phase-slider" id="confidence-slider" min="0" max="9" step="1" value="5">
+      <div class="slider-labels" style="margin-top: 10px;">
         <span>Not at all</span>
         <span>Extremely</span>
       </div>
     </div>
+
     <div class="spacer"></div>
     <button class="btn btn-primary btn-block" id="confirm-confidence-btn" disabled style="max-width:320px; margin:0 auto;">
-      Confirm
+      Confirm Rating
     </button>
   </div>
 
@@ -459,50 +430,594 @@
   <div class="screen" id="screen-bodymap">
     <div class="spacer"></div>
     <h1 style="text-align:center;">Body Map</h1>
-    <p style="text-align:center; color:var(--fg-muted); font-size:0.85rem;">
-      Where did you feel your heartbeat?
+    <p style="text-align:center; color:var(--fg-muted); margin-bottom: 24px;">
+      Where did you feel your heartbeat the most?
     </p>
-    <button class="btn btn-outline btn-block" id="nowhere-btn" style="max-width:320px; margin:0 auto 8px;">Nowhere</button>
+    <button class="btn btn-outline btn-block" id="nowhere-btn" style="max-width:320px; margin:0 auto 16px;">Nowhere</button>
     <div class="body-map-grid" style="margin:0 auto;">
-      <div class="body-part" data-value="1" data-name="chest">Chest</div>
-      <div class="body-part" data-value="2" data-name="fingers">Fingers</div>
-      <div class="body-part" data-value="3" data-name="neck">Neck</div>
-      <div class="body-part" data-value="4" data-name="ears">Ears</div>
-      <div class="body-part" data-value="5" data-name="stomach">Stomach</div>
-      <div class="body-part" data-value="6" data-name="legs">Legs</div>
-      <div class="body-part" data-value="7" data-name="head">Head</div>
+      <div class="body-part" data-value="1" data-name="Chest">Chest</div>
+      <div class="body-part" data-value="2" data-name="Fingers">Fingers</div>
+      <div class="body-part" data-value="3" data-name="Neck">Neck</div>
+      <div class="body-part" data-value="4" data-name="Ears">Ears</div>
+      <div class="body-part" data-value="5" data-name="Stomach">Stomach</div>
+      <div class="body-part" data-value="6" data-name="Legs">Legs</div>
+      <div class="body-part" data-value="7" data-name="Head">Head</div>
     </div>
     <p id="bodymap-selected" style="text-align:center;"></p>
     <div class="spacer"></div>
-    <button class="btn btn-primary btn-block" id="confirm-bodymap-btn" disabled style="max-width:320px; margin:0 auto;">Confirm</button>
+    <button class="btn btn-primary btn-block" id="confirm-bodymap-btn" disabled style="max-width:320px; margin:0 auto;">Confirm Selection</button>
   </div>
 
   <!-- 7. End -->
   <div class="screen" id="screen-end">
-    <div style="font-size:3rem; text-align:center;">✅</div>
-    <h1 style="text-align:center;">Task complete</h1>
-    <p id="data-preview"></p>
-    <button class="btn btn-primary btn-block" id="download-btn" style="max-width:320px; margin:0 auto;">
-      Download data (JSON)
+    <div style="font-size:4rem; text-align:center; filter: drop-shadow(0 0 20px rgba(74, 222, 128, 0.4));">✅</div>
+    <h1 style="text-align:center;">Task Complete</h1>
+    <p id="data-preview" style="text-align: center; color: var(--fg-muted); font-family: var(--font-mono); font-size: 0.9rem;"></p>
+    <button class="btn btn-primary btn-block" id="download-btn" style="max-width:320px; margin: 0 auto; background: linear-gradient(135deg, #10b981, #059669);">
+      Download Data (JSON)
     </button>
-    <p style="font-size:0.75rem; color:var(--fg-muted); text-align:center; margin-top:8px;">
-      Data format is compatible with the PAT R analysis script.
+    <p style="font-size:0.8rem; color:var(--fg-muted); text-align:center; margin-top:16px;">
+      Thank you for your participation.
     </p>
   </div>
 
   <script>
-    // Generate knob ticks
-    (function() {
-      const c = document.getElementById('knob-ticks');
-      for (let i = 0; i < 72; i++) {
-        const t = document.createElement('div');
-        t.className = 'knob-tick';
-        t.style.transform = `rotate(${i * 5}deg)`;
-        if (i % 2 === 0) t.style.height = '8px';
-        c.appendChild(t);
-      }
+    "use strict";
+
+    // ============================================================
+    // WAKE LOCK CONTROLLER (Prevents screen from sleeping)
+    // ============================================================
+    const WakeLockCtrl = (function() {
+      let wakeLock = null;
+      return {
+        async request() {
+          try {
+            if ('wakeLock' in navigator) {
+              wakeLock = await navigator.wakeLock.request('screen');
+              console.log('[PAT] Wake Lock active');
+              wakeLock.addEventListener('release', () => console.log('[PAT] Wake Lock released'));
+            }
+          } catch (err) { console.warn(`[PAT] Wake Lock error: ${err.message}`); }
+        },
+        release() {
+          if (wakeLock !== null) { wakeLock.release(); wakeLock = null; }
+        }
+      };
     })();
+
+    // ============================================================
+    // PPG BEAT DETECTOR — replaces BioBeats' HeartDetectorEngine
+    // ============================================================
+    const BeatDetector = (function () {
+      const SAMPLE_RATE = 30;
+      const IMAGE_SIZE = 40;
+      const MIN_BPM = 40;
+      const MAX_BPM = 120;
+      const REFRACTORY_MS = 500;
+      const BUFFER_SECONDS = 8;
+      const BUFFER_SIZE = SAMPLE_RATE * BUFFER_SECONDS;
+      const BASELINE_SECONDS = 2;
+
+      const FINGER_BRIGHTNESS_MIN = 0.15;
+      const FINGER_BRIGHTNESS_MAX = 0.98;
+      const FINGER_RED_DOMINANCE = 0.38;
+
+      let videoEl, canvasEl, ctx;
+      let rawBuffer = [], timeBuffer = [], filteredBuffer = [];
+      let lastBeatTime = 0, startTime = 0;
+      let running = false, stream = null, animFrameId = null, fingerPresent = false;
+      let fingerDebounceCount = 0;
+      const FINGER_DEBOUNCE_FRAMES = 8;
+
+      let instantBPM = 0, averageBPM = 0;
+      let instantPeriod = 0, averagePeriod = 0;
+      let recentPeriods = [];
+      const MAX_RECENT_PERIODS = 10;
+
+      let onBeat = null, onFingerChange = null, onPPGSample = null;
+
+      let hpState = { x1: 0, y1: 0 }, lpState = { y1: 0 };
+      const HP_ALPHA = 1 / (1 + (2 * Math.PI * 0.67) / SAMPLE_RATE);
+      const LP_ALPHA = (2 * Math.PI * 3.33 / SAMPLE_RATE) / (1 + (2 * Math.PI * 3.33) / SAMPLE_RATE);
+
+      function highpass(x) { const y = HP_ALPHA * (hpState.y1 + x - hpState.x1); hpState.x1 = x; hpState.y1 = y; return y; }
+      function lowpass(x) { const y = lpState.y1 + LP_ALPHA * (x - lpState.y1); lpState.y1 = y; return y; }
+      function bandpass(x) { return lowpass(highpass(x)); }
+      function resetFilters() { hpState = { x1: 0, y1: 0 }; lpState = { y1: 0 }; }
+
+      function extractRedMean() {
+        ctx.drawImage(videoEl, 0, 0, IMAGE_SIZE, IMAGE_SIZE);
+        const pixels = ctx.getImageData(0, 0, IMAGE_SIZE, IMAGE_SIZE).data;
+        let rS = 0, gS = 0, bS = 0;
+        const count = pixels.length / 4;
+        for (let i = 0; i < pixels.length; i += 4) { rS += pixels[i]; gS += pixels[i + 1]; bS += pixels[i + 2]; }
+        const rM = rS / count / 255, gM = gS / count / 255, bM = bS / count / 255;
+        const brightness = (rM + gM + bM) / 3;
+        const redRatio = rM / (rM + gM + bM + 0.001);
+
+        const looksLikeFinger = brightness > FINGER_BRIGHTNESS_MIN && brightness < FINGER_BRIGHTNESS_MAX && redRatio > FINGER_RED_DOMINANCE;
+        if (looksLikeFinger !== fingerPresent) {
+          fingerDebounceCount++;
+          if (fingerDebounceCount >= FINGER_DEBOUNCE_FRAMES) {
+            fingerPresent = looksLikeFinger; fingerDebounceCount = 0;
+            if (onFingerChange) onFingerChange(fingerPresent);
+          }
+        } else { fingerDebounceCount = 0; }
+        return rM;
+      }
+
+      function detectPeak() {
+        if (filteredBuffer.length < 5) return false;
+        const now = Date.now();
+        if (now - lastBeatTime < REFRACTORY_MS) return false;
+        if (now - startTime < BASELINE_SECONDS * 1000) return false;
+
+        const len = filteredBuffer.length;
+        const prev2 = filteredBuffer[len - 3] || 0;
+        const prev1 = filteredBuffer[len - 2];
+        const curr = filteredBuffer[len - 1];
+
+        if (prev1 > prev2 && prev1 > curr) {
+          const slice = filteredBuffer.slice(-SAMPLE_RATE * 3);
+          const sMax = Math.max(...slice), sMin = Math.min(...slice);
+          const amplitude = sMax - sMin;
+          if (prev1 > sMin + amplitude * 0.6 && amplitude > 0.0005) return true;
+        }
+        return false;
+      }
+
+      function processFrame() {
+        if (!running) return;
+        const now = Date.now();
+        const rawValue = extractRedMean();
+        const filtered = bandpass(rawValue);
+
+        rawBuffer.push(rawValue); timeBuffer.push(now); filteredBuffer.push(filtered);
+        if (rawBuffer.length > BUFFER_SIZE) { rawBuffer.shift(); timeBuffer.shift(); filteredBuffer.shift(); }
+
+        if (onPPGSample) onPPGSample(filtered);
+
+        if (fingerPresent && detectPeak()) {
+          const beatTime = now - (1000 / SAMPLE_RATE);
+          const interval = beatTime - lastBeatTime;
+          lastBeatTime = beatTime;
+
+          if (interval > 0 && interval < (60000 / MIN_BPM)) {
+            instantPeriod = interval / 1000;
+            instantBPM = 60 / instantPeriod;
+            recentPeriods.push(instantPeriod);
+            if (recentPeriods.length > MAX_RECENT_PERIODS) recentPeriods.shift();
+            averagePeriod = recentPeriods.reduce((a, b) => a + b, 0) / recentPeriods.length;
+            averageBPM = 60 / averagePeriod;
+            if (onBeat) onBeat({ instantBPM, averageBPM, instantPeriod, averagePeriod, time: beatTime });
+          }
+        }
+        animFrameId = requestAnimationFrame(processFrame);
+      }
+
+      async function startCamera() {
+        if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; }
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" }, width: { ideal: IMAGE_SIZE }, height: { ideal: IMAGE_SIZE } } });
+
+        let torchWorking = false;
+        try {
+          const track = stream.getVideoTracks()[0];
+          await track.applyConstraints({ advanced: [{ torch: true }] });
+          torchWorking = true;
+        } catch (e) {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const cameras = devices.filter((d) => d.kind === "videoinput");
+          for (const cam of cameras) {
+            const label = (cam.label || "").toLowerCase();
+            if (label.includes("front") || label.includes("facetime")) continue;
+            try {
+              stream.getTracks().forEach((t) => t.stop());
+              stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: cam.deviceId }, width: { ideal: IMAGE_SIZE }, height: { ideal: IMAGE_SIZE } } });
+              const track = stream.getVideoTracks()[0];
+              try { await track.applyConstraints({ advanced: [{ torch: true }] }); torchWorking = true; break; } catch (torchErr) {}
+            } catch (camErr) {}
+          }
+        }
+        videoEl.srcObject = stream; await videoEl.play();
+      }
+
+      async function stopCamera() {
+        if (stream) {
+          try { const t = stream.getVideoTracks()[0]; await t.applyConstraints({ advanced: [{ torch: false }] }); } catch (e) {}
+          stream.getTracks().forEach((t) => t.stop()); stream = null;
+        }
+        if (videoEl) videoEl.srcObject = null;
+      }
+
+      return {
+        async start({ video, canvas, onBeatCb, onFingerChangeCb, onPPGSampleCb }) {
+          videoEl = video; canvasEl = canvas; ctx = canvas.getContext("2d");
+          canvasEl.width = IMAGE_SIZE; canvasEl.height = IMAGE_SIZE;
+          onBeat = onBeatCb; onFingerChange = onFingerChangeCb; onPPGSample = onPPGSampleCb || null;
+          rawBuffer = []; timeBuffer = []; filteredBuffer = []; recentPeriods = [];
+          lastBeatTime = 0; instantBPM = 0; averageBPM = 0;
+          fingerPresent = false; fingerDebounceCount = 0; resetFilters();
+          await startCamera();
+          startTime = Date.now(); running = true; processFrame();
+        },
+        setCallbacks({ onBeatCb, onFingerChangeCb, onPPGSampleCb }) {
+          onBeat = onBeatCb || null; onFingerChange = onFingerChangeCb || null; onPPGSample = onPPGSampleCb || null;
+        },
+        async stop() { running = false; if (animFrameId) cancelAnimationFrame(animFrameId); await stopCamera(); },
+      };
+    })();
+
+    // ============================================================
+    // AUDIO ENGINE
+    // ============================================================
+    const AudioEngine = (function () {
+      let audioCtx, lowBuf, highBuf;
+      function createBeep(freq, dur) {
+        const sr = 44100, len = sr * dur, buf = audioCtx.createBuffer(1, len, sr), d = buf.getChannelData(0);
+        for (let i = 0; i < len; i++) { const t = i / sr; d[i] = Math.sin(2 * Math.PI * freq * t) * Math.min(1, t * 50) * Math.min(1, (dur - t) * 50) * 0.5; }
+        return buf;
+      }
+      function play(buf) { if (!audioCtx) return; const s = audioCtx.createBufferSource(); s.buffer = buf; s.connect(audioCtx.destination); s.start(); }
+      return {
+        init() { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); lowBuf = createBeep(440, 0.08); highBuf = createBeep(880, 0.06); },
+        playLow() { play(lowBuf); }, playHigh() { play(highBuf); },
+        resume() { if (audioCtx?.state === "suspended") audioCtx.resume(); },
+      };
+    })();
+
+    // ============================================================
+    // PHASE ADJUSTMENT TASK
+    // ============================================================
+    const PAT = (function () {
+      const NUM_TRIALS = 20, NUM_PRACTICES = 2, BODY_MAP_EVERY = 4;
+      const KNOB_VALUE_RANGE = 1.0, SHORTEST_DELAY = 60 / 140, BASELINE_DURATION_S = 120;
+
+      let participantId = "", currentTrialIndex = -NUM_PRACTICES, currentKnobValue = 0, trialRunning = false;
+      let trialIP = [], trialAP = [], trialKS = [], trialCD = [], trialIE = [];
+      let trialRecordedHR = [], trialInstantBpms = []; 
+      let sessionData = { participantID: "", startDate: null, endDate: null, baselines: [], syncroTraining: [] };
+      let currentInstantPeriod = 0, currentAveragePeriod = 0;
+
+      function currentDelay() {
+        if (currentAveragePeriod === 0) return SHORTEST_DELAY;
+        return (currentAveragePeriod / 2) * currentKnobValue;
+      }
+
+      function handleTrialBeat(beat) {
+        const prev = currentInstantPeriod;
+        currentInstantPeriod = beat.instantPeriod; currentAveragePeriod = beat.averagePeriod;
+        trialIP.push(currentInstantPeriod); trialAP.push(currentAveragePeriod);
+        trialKS.push(currentKnobValue); trialIE.push(prev - currentInstantPeriod);
+        trialCD.push(currentDelay());
+        trialRecordedHR.push(beat.instantBPM); trialInstantBpms.push(beat.averageBPM);
+
+        const delay = currentDelay();
+        const delayFromNow = delay < 0 ? currentInstantPeriod + delay : delay;
+        if (delayFromNow > 0 && delayFromNow < 3) {
+          setTimeout(() => { if (trialRunning) AudioEngine.playLow(); }, delayFromNow * 1000);
+        }
+      }
+
+      function collectTrialData() {
+        return {
+          date: new Date().toISOString(), instantPeriods: [...trialIP], averagePeriods: [...trialAP],
+          knobScales: [...trialKS], currentDelays: [...trialCD], instantErrs: [...trialIE],
+          recordedHR: [...trialRecordedHR], instantBpms: [...trialInstantBpms], confidence: -1, bodyPos: -1,
+        };
+      }
+
+      function resetTrialBuffers() {
+        trialIP = []; trialAP = []; trialKS = []; trialCD = []; trialIE = [];
+        trialRecordedHR = []; trialInstantBpms = [];
+        currentInstantPeriod = 0; currentAveragePeriod = 0;
+      }
+
+      return {
+        NUM_TRIALS, NUM_PRACTICES, BODY_MAP_EVERY, KNOB_VALUE_RANGE, BASELINE_DURATION_S,
+        get currentTrialIndex() { return currentTrialIndex; }, set currentTrialIndex(v) { currentTrialIndex = v; },
+        get currentKnobValue() { return currentKnobValue; }, set currentKnobValue(v) { currentKnobValue = Math.max(-KNOB_VALUE_RANGE, Math.min(KNOB_VALUE_RANGE, v)); },
+        get trialRunning() { return trialRunning; }, set trialRunning(v) { trialRunning = v; },
+        get participantId() { return participantId; }, set participantId(v) { participantId = v; },
+        get sessionData() { return sessionData; },
+        currentDelay, handleTrialBeat, collectTrialData, resetTrialBuffers,
+        randomKnobStart() { return (Math.random() * 2 - 1) * KNOB_VALUE_RANGE; },
+        initSession() { sessionData = { participantID: participantId, startDate: new Date().toISOString(), endDate: null, baselines: [], syncroTraining: [] }; currentTrialIndex = -NUM_PRACTICES; },
+        isPractice() { return currentTrialIndex < 0; },
+        displayTrialLabel() { return currentTrialIndex < 0 ? `PRACTICE TRIAL ${NUM_PRACTICES + currentTrialIndex + 1}` : `TRIAL ${currentTrialIndex + 1} of ${NUM_TRIALS}`; },
+        showBodyMapThisTrial() { return currentTrialIndex >= 0 && (currentTrialIndex + 1) % BODY_MAP_EVERY === 0; },
+        addTrialResult(d) { sessionData.syncroTraining.push(d); },
+        addBaseline(d) { sessionData.baselines.push(d); },
+        finalizeSession() { sessionData.endDate = new Date().toISOString(); },
+        exportJSON() { return JSON.stringify(sessionData, null, 2); },
+      };
+    })();
+
+    // ============================================================
+    // MOTION DETECTOR 
+    // ============================================================
+    const MotionDetector = (function () {
+      const MOVEMENT_THRESHOLD = 0.2;
+      let accBuffer = [], lastAcc = { x: 0, y: 0, z: 0 };
+      let listening = false, permitted = false, onMovementWarning = null;
+
+      function handleMotion(e) {
+        const a = e.accelerationIncludingGravity || e.acceleration;
+        if (!a) return;
+        const mag = Math.sqrt(Math.pow(a.x - lastAcc.x, 2) + Math.pow(a.y - lastAcc.y, 2) + Math.pow(a.z - lastAcc.z, 2));
+        accBuffer.push(mag); lastAcc = { x: a.x, y: a.y, z: a.z };
+      }
+
+      return {
+        async requestPermission() {
+          if (typeof DeviceMotionEvent !== "undefined" && typeof DeviceMotionEvent.requestPermission === "function") {
+            try { const perm = await DeviceMotionEvent.requestPermission(); permitted = (perm === "granted"); } catch (e) { permitted = false; }
+          } else { permitted = true; }
+          return permitted;
+        },
+        start(warningCb) {
+          if (!permitted) return;
+          onMovementWarning = warningCb || null; accBuffer = []; lastAcc = { x: 0, y: 0, z: 0 };
+          window.addEventListener("devicemotion", handleMotion); listening = true;
+        },
+        stop() { if (listening) { window.removeEventListener("devicemotion", handleMotion); listening = false; } },
+        checkMovement() {
+          if (accBuffer.length === 0) return false;
+          const mean = accBuffer.reduce((a, b) => a + b, 0) / accBuffer.length;
+          accBuffer = [];
+          const tooMuch = mean > MOVEMENT_THRESHOLD;
+          if (tooMuch && onMovementWarning) onMovementWarning();
+          return tooMuch;
+        },
+      };
+    })();
+
+    // ============================================================
+    // UI CONTROLLER
+    // ============================================================
+    const UI = (function () {
+      const screens = {};
+      let currentScreen = null;
+      let baselineBPMs = [], baselineTimer = null, baselineStartTime = 0;
+      let videoEl, canvasEl, waveCanvas, waveCtx, waveBuffer = [];
+      const WAVE_MAX = 180;
+      let trialDetectorRunning = false;
+
+      function hideAllOverlays() { document.querySelectorAll(".finger-overlay").forEach((el) => el.classList.remove("visible")); }
+      function show(id) {
+        hideAllOverlays();
+        if (currentScreen) currentScreen.classList.remove("active");
+        currentScreen = screens[id]; currentScreen.classList.add("active");
+      }
+
+      // ---- Phase Slider Logic ----
+      function initPhaseSlider() {
+        const slider = document.getElementById("phase-slider");
+        slider.addEventListener("input", (e) => {
+          PAT.currentKnobValue = parseFloat(e.target.value);
+          document.getElementById("confirm-trial-btn").disabled = false;
+        });
+      }
+      function setPhaseSlider(val) {
+        const slider = document.getElementById("phase-slider");
+        slider.value = val;
+      }
+
+      function drawWaveform() {
+        if (!waveCanvas || !waveCtx) return;
+        const w = waveCanvas.clientWidth, h = waveCanvas.clientHeight;
+        waveCtx.clearRect(0, 0, waveCanvas.width, waveCanvas.height);
+        if (waveBuffer.length < 2) return;
+        let min = waveBuffer[0], max = waveBuffer[0];
+        for (const v of waveBuffer) { if (v < min) min = v; if (v > max) max = v; }
+        const range = max - min || 0.001, pad = 8;
+        const dpr = window.devicePixelRatio || 1;
+
+        waveCtx.beginPath();
+        waveCtx.strokeStyle = "#fb7185";
+        waveCtx.lineWidth = 3 * dpr;
+        waveCtx.lineJoin = "round"; waveCtx.lineCap = "round";
+
+        const xStep = (w * dpr) / WAVE_MAX;
+        const xOff = (WAVE_MAX - waveBuffer.length) * xStep;
+        for (let i = 0; i < waveBuffer.length; i++) {
+          const x = xOff + i * xStep;
+          const y = pad * dpr + ((max - waveBuffer[i]) / range) * (h * dpr - pad * 2 * dpr);
+          i === 0 ? waveCtx.moveTo(x, y) : waveCtx.lineTo(x, y);
+        }
+        waveCtx.stroke();
+      }
+
+      function triggerPulse(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.classList.remove("pulse-anim");
+        void el.offsetWidth;
+        el.classList.add("pulse-anim");
+      }
+
+      function showParticipantId() { show("screen-participant"); document.getElementById("participant-input").focus(); }
+      function showOnboarding(step) {
+        show("screen-onboarding");
+        document.querySelectorAll(".onboarding-step").forEach((s) => s.classList.remove("active"));
+        const t = document.querySelector(`.onboarding-step[data-step="${step}"]`);
+        if (t) t.classList.add("active");
+      }
+
+      async function showBaseline() {
+        show("screen-baseline");
+        baselineBPMs = []; waveBuffer = []; baselineStartTime = Date.now();
+        await WakeLockCtrl.request();
+
+        const progEl = document.getElementById("baseline-progress"), secsEl = document.getElementById("baseline-secs"),
+              bpmEl = document.getElementById("baseline-bpm"), beatEl = document.getElementById("baseline-beat-count"), statusEl = document.getElementById("baseline-status");
+
+        waveCanvas = document.getElementById("wave-canvas"); waveCtx = waveCanvas.getContext("2d");
+        const dpr = window.devicePixelRatio || 1;
+        waveCanvas.width = waveCanvas.clientWidth * dpr; waveCanvas.height = waveCanvas.clientHeight * dpr;
+
+        const previewCanvas = document.getElementById("camera-preview"), previewCtx = previewCanvas.getContext("2d");
+        const previewSize = 88 * dpr; previewCanvas.width = previewSize; previewCanvas.height = previewSize;
+
+        videoEl = document.getElementById("video-feed"); canvasEl = document.getElementById("sampling-canvas");
+        let beatCount = 0;
+
+        await BeatDetector.start({
+          video: videoEl, canvas: canvasEl,
+          onBeatCb: (beat) => {
+            baselineBPMs.push(beat.instantBPM); bpmEl.textContent = Math.round(beat.averageBPM);
+            beatCount++; beatEl.textContent = beatCount; triggerPulse("baseline-heart");
+            if (beatCount < 5) statusEl.textContent = "Detecting heartbeat...";
+            else if (beatCount < 15) statusEl.textContent = "Signal acquired — keep still";
+            else statusEl.textContent = "Good signal — recording baseline";
+          },
+          onFingerChangeCb: (present) => {
+            document.getElementById("baseline-finger-overlay").classList.toggle("visible", !present);
+            statusEl.textContent = present ? "Finger detected — warming up..." : "Waiting for finger...";
+          },
+          onPPGSampleCb: (sample) => {
+            waveBuffer.push(sample); if (waveBuffer.length > WAVE_MAX) waveBuffer.shift(); drawWaveform();
+            previewCtx.save(); previewCtx.beginPath(); previewCtx.arc(previewSize / 2, previewSize / 2, previewSize / 2, 0, Math.PI * 2); previewCtx.closePath(); previewCtx.clip();
+            previewCtx.drawImage(videoEl, 0, 0, previewSize, previewSize); previewCtx.restore();
+          },
+        });
+
+        const circ = 2 * Math.PI * 45;
+        baselineTimer = setInterval(() => {
+          const elapsed = (Date.now() - baselineStartTime) / 1000;
+          const remaining = Math.max(0, PAT.BASELINE_DURATION_S - elapsed);
+          const pct = Math.min(1, elapsed / PAT.BASELINE_DURATION_S);
+          progEl.textContent = Math.round(pct * 100) + "%"; secsEl.textContent = Math.ceil(remaining);
+          const circle = document.getElementById("baseline-progress-circle");
+          if (circle) circle.style.strokeDashoffset = circ * (1 - pct);
+          if (remaining <= 0) { clearInterval(baselineTimer); finishBaseline(); }
+        }, 1000);
+      }
+
+      async function finishBaseline() {
+        await BeatDetector.stop(); hideAllOverlays();
+        PAT.addBaseline({ date: new Date().toISOString(), recordedHR: baselineBPMs.map((b) => Math.round(b)), instantBpms: [...baselineBPMs] });
+        showOnboarding("post-baseline");
+      }
+
+      function trialBeatHandler(beat) {
+        PAT.handleTrialBeat(beat);
+        document.getElementById("trial-bpm").textContent = Math.round(beat.averageBPM);
+        triggerPulse("trial-heart");
+        const tooMuch = MotionDetector.checkMovement();
+        const moveWarn = document.getElementById("trial-movement-warning");
+        if (moveWarn && tooMuch) {
+          moveWarn.classList.add("visible"); clearTimeout(moveWarn._hideTimer);
+          moveWarn._hideTimer = setTimeout(() => moveWarn.classList.remove("visible"), 2000);
+        }
+      }
+
+      function trialFingerHandler(present) { document.getElementById("trial-finger-overlay").classList.toggle("visible", !present); }
+
+      async function startTrial() {
+        show("screen-trial"); PAT.resetTrialBuffers();
+        PAT.currentKnobValue = PAT.randomKnobStart();
+        setPhaseSlider(PAT.currentKnobValue);
+        
+        PAT.trialRunning = true;
+        document.getElementById("trial-label").textContent = PAT.displayTrialLabel();
+        document.getElementById("confirm-trial-btn").disabled = true;
+
+        MotionDetector.start();
+        videoEl = document.getElementById("video-feed"); canvasEl = document.getElementById("sampling-canvas");
+
+        if (!trialDetectorRunning) {
+          await BeatDetector.start({ video: videoEl, canvas: canvasEl, onBeatCb: trialBeatHandler, onFingerChangeCb: trialFingerHandler });
+          trialDetectorRunning = true;
+        } else { BeatDetector.setCallbacks({ onBeatCb: trialBeatHandler, onFingerChangeCb: trialFingerHandler }); }
+      }
+
+      async function confirmTrial() {
+        PAT.trialRunning = false; MotionDetector.stop();
+        BeatDetector.setCallbacks({ onBeatCb: null, onFingerChangeCb: null, onPPGSampleCb: null });
+        hideAllOverlays(); showConfidence(PAT.collectTrialData());
+      }
+
+      function showConfidence(td) {
+        show("screen-confidence");
+        const sl = document.getElementById("confidence-slider"), vd = document.getElementById("confidence-value");
+        sl.value = Math.floor(Math.random() * 10); vd.textContent = sl.value;
+        sl.oninput = () => { vd.textContent = sl.value; document.getElementById("confirm-confidence-btn").disabled = false; };
+        document.getElementById("confirm-confidence-btn").disabled = true;
+        document.getElementById("confirm-confidence-btn").onclick = () => {
+          td.confidence = parseInt(sl.value);
+          PAT.showBodyMapThisTrial() ? showBodyMap(td) : finalizeTrial(td);
+        };
+      }
+
+      function showBodyMap(td) {
+        show("screen-bodymap");
+        const parts = document.querySelectorAll(".body-part"), nb = document.getElementById("nowhere-btn"), cb = document.getElementById("confirm-bodymap-btn"), lb = document.getElementById("bodymap-selected");
+        let sel = -1; cb.disabled = true; lb.textContent = "";
+        parts.forEach((p) => { p.classList.remove("selected"); p.onclick = () => {
+          parts.forEach((pp) => pp.classList.remove("selected")); nb.classList.remove("selected");
+          p.classList.add("selected"); sel = parseInt(p.dataset.value);
+          lb.textContent = `${p.dataset.name} Selected`; cb.disabled = false;
+        }; });
+        nb.classList.remove("selected"); nb.onclick = () => {
+          parts.forEach((pp) => pp.classList.remove("selected")); nb.classList.add("selected");
+          sel = 8; lb.textContent = "Nowhere Selected"; cb.disabled = false;
+        };
+        cb.onclick = () => { td.bodyPos = sel; finalizeTrial(td); };
+      }
+
+      function finalizeTrial(td) {
+        PAT.addTrialResult(td); PAT.currentTrialIndex++;
+        PAT.currentTrialIndex >= PAT.NUM_TRIALS ? showEnd() : startTrial();
+      }
+
+      async function showEnd() {
+        PAT.finalizeSession(); PAT.trialRunning = false; trialDetectorRunning = false;
+        await BeatDetector.stop(); WakeLockCtrl.release();
+        show("screen-end");
+        document.getElementById("data-preview").textContent = `Session complete. ${PAT.sessionData.syncroTraining.length} trials successfully recorded.`;
+      }
+
+      function downloadData() {
+        const b = new Blob([PAT.exportJSON()], { type: "application/json" });
+        const u = URL.createObjectURL(b);
+        const a = document.createElement("a"); a.href = u;
+        a.download = `PAT_${PAT.participantId}_${new Date().toISOString().slice(0, 10)}.json`;
+        a.click(); URL.revokeObjectURL(u);
+      }
+
+      function init() {
+        document.querySelectorAll(".screen").forEach((s) => { screens[s.id] = s; });
+        initPhaseSlider(); AudioEngine.init();
+
+        document.getElementById("start-btn").onclick = () => {
+          const pid = document.getElementById("participant-input").value.trim();
+          if (!pid) return;
+          PAT.participantId = pid; PAT.initSession(); AudioEngine.resume(); showOnboarding("1");
+        };
+
+        document.querySelectorAll("[data-next-step]").forEach((btn) => {
+          btn.onclick = async () => {
+            AudioEngine.resume();
+            const next = btn.dataset.nextStep;
+            if (next === "baseline") {
+              await MotionDetector.requestPermission(); showBaseline();
+            } else if (next === "start-trials") { startTrial(); }
+            else { showOnboarding(next); }
+          };
+        });
+
+        document.getElementById("confirm-trial-btn").onclick = () => { AudioEngine.resume(); confirmTrial(); };
+        document.getElementById("download-btn").onclick = downloadData;
+        showParticipantId();
+      }
+
+      return { init };
+    })();
+
+    document.addEventListener("DOMContentLoaded", () => {
+      UI.init();
+      if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(() => {});
+    });
   </script>
-  <script src="app.js"></script>
 </body>
 </html>
