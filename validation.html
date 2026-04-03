@@ -371,7 +371,8 @@
             const beatTime = now - (1000 / actualFPS);
             const interval = beatTime - lastBeatTime;
             lastBeatTime = beatTime;
-            if (interval > 0 && interval < (60000 / MIN_BPM)) {
+            const MIN_IBI_MS = 400;
+            if (interval > MIN_IBI_MS && interval < (60000 / MIN_BPM)) {
               instantPeriod = interval / 1000;
               const instantBPM = 60 / instantPeriod;
               recentPeriods.push(instantPeriod);

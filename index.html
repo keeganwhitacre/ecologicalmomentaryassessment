@@ -721,7 +721,14 @@
             const beatTime = now - (1000 / actualFPS); // onset was ~1 frame ago
             const interval = beatTime - lastBeatTime;
             lastBeatTime = beatTime;
-            if (interval > 0 && interval < (60000 / MIN_BPM)) {
+            // Guard: WABP eye-closing is 250ms (tuned for clean 125Hz ABP).
+            // Camera PPG at 30-120fps can resolve dicrotic notch reflections
+            // that appear 300-400ms after onset, outside the eye-closing window.
+            // Enforce a 400ms minimum IBI (= 150 BPM ceiling, physiologically safe)
+            // to reject these. This is equivalent to the old REFRACTORY_MS = 500
+            // but tighter to avoid clipping fast resting HRs.
+            const MIN_IBI_MS = 400;
+            if (interval > MIN_IBI_MS && interval < (60000 / MIN_BPM)) {
               instantPeriod = interval / 1000;
               const instantBPM = 60 / instantPeriod;
               recentPeriods.push(instantPeriod);

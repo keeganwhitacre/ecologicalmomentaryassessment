@@ -664,7 +664,7 @@
           if (result.detected) {
             const beatTime = now - (1000/actualFPS), interval = beatTime - lastBeatTime;
             lastBeatTime = beatTime;
-            if (interval > 0 && interval < 1500) {
+            if (interval > 400 && interval < 1500) {
               const ip = interval / 1000;
               recentPeriods.push(ip); if (recentPeriods.length > 10) recentPeriods.shift();
               const ap = recentPeriods.reduce((a,b) => a+b, 0) / recentPeriods.length;
