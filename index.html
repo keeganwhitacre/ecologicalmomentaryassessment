@@ -647,6 +647,11 @@
       let onBeat = null, onFingerChange = null, onPPGSample = null;
       let actualFPS = 30; // will be updated from camera settings
 
+      // --- Frame timing diagnostics (VFR detection) ---
+      let lastFrameTime = 0, frameDeltaBuffer = [], frameDropCount = 0, totalFrames = 0;
+      // --- Brightness clipping diagnostics (ISP auto-exposure) ---
+      let clipHighCount = 0, clipLowCount = 0, lastBrightness = 0;
+
       // Bandpass filter state — coefficients recomputed when actualFPS is known
       let hpState = { x1: 0, y1: 0 }, lpState = { y1: 0 };
       let HP_ALPHA, LP_ALPHA;
@@ -671,6 +676,13 @@
         const redRatio = rM / (rM + gM + bM + 0.001);
 
         const looksLikeFinger = brightness > FINGER_BRIGHTNESS_MIN && brightness < FINGER_BRIGHTNESS_MAX && redRatio > FINGER_RED_DOMINANCE;
+
+        // Track ISP clipping: if brightness saturates high or low, the AC pulse
+        // component is being crushed by auto-exposure. Flag for post-hoc QC.
+        lastBrightness = brightness;
+        if (brightness > 0.95) clipHighCount++;
+        else if (brightness < 0.05 && fingerPresent) clipLowCount++;
+
         if (looksLikeFinger !== fingerPresent) {
           fingerDebounceCount++;
           if (fingerDebounceCount >= FINGER_DEBOUNCE_FRAMES) {
@@ -685,6 +697,18 @@
         if (!running) return;
         const now = Date.now(), rawValue = extractRedMean(), filtered = bandpass(rawValue);
         const BUFFER_SIZE = Math.round(actualFPS * BUFFER_SECONDS);
+
+        // --- Track actual inter-frame timing ---
+        totalFrames++;
+        if (lastFrameTime > 0) {
+          const dt = now - lastFrameTime;
+          frameDeltaBuffer.push(dt);
+          if (frameDeltaBuffer.length > 300) frameDeltaBuffer.shift(); // keep last ~5-10s
+          // Flag frame drops: if dt > 2x expected interval, the ISP dropped frames
+          const expectedInterval = 1000 / actualFPS;
+          if (dt > expectedInterval * 2) frameDropCount++;
+        }
+        lastFrameTime = now;
 
         rawBuffer.push(rawValue); timeBuffer.push(now); filteredBuffer.push(filtered);
         if (rawBuffer.length > BUFFER_SIZE) { rawBuffer.shift(); timeBuffer.shift(); filteredBuffer.shift(); }
@@ -788,6 +812,9 @@
           onBeat = onBeatCb; onFingerChange = onFingerChangeCb; onPPGSample = onPPGSampleCb || null;
           rawBuffer = []; timeBuffer = []; filteredBuffer = []; recentPeriods = [];
           lastBeatTime = 0; fingerPresent = false; fingerDebounceCount = 0;
+          // Reset diagnostics
+          lastFrameTime = 0; frameDeltaBuffer = []; frameDropCount = 0; totalFrames = 0;
+          clipHighCount = 0; clipLowCount = 0; lastBrightness = 0;
           await startCamera();
           // Recompute filter coefficients and WABP constants for actual framerate
           computeFilterCoeffs(actualFPS); resetFilters();
@@ -799,6 +826,35 @@
         },
         async stop() { running = false; if (animFrameId) cancelAnimationFrame(animFrameId); await stopCamera(); },
         getActualFPS() { return actualFPS; },
+        /** Return frame timing and clipping diagnostics for session QC */
+        getDiagnostics() {
+          const deltas = frameDeltaBuffer;
+          const meanDelta = deltas.length > 0 ? deltas.reduce((a, b) => a + b, 0) / deltas.length : 0;
+          const sortedDeltas = [...deltas].sort((a, b) => a - b);
+          const medianDelta = sortedDeltas.length > 0 ? sortedDeltas[Math.floor(sortedDeltas.length / 2)] : 0;
+          // Effective FPS from actual frame deltas (more accurate than getSettings)
+          const effectiveFPS = medianDelta > 0 ? 1000 / medianDelta : actualFPS;
+          // Jitter: IQR of frame deltas
+          const q1 = sortedDeltas[Math.floor(sortedDeltas.length * 0.25)] || 0;
+          const q3 = sortedDeltas[Math.floor(sortedDeltas.length * 0.75)] || 0;
+          // Group delay estimate for the bandpass filter at 1.2 Hz (typical cardiac)
+          const fc = 1.2, fs = effectiveFPS;
+          const hpGD = (1 - HP_ALPHA) / (2 * Math.PI * fc * (1 - 2 * HP_ALPHA * Math.cos(2 * Math.PI * fc / fs) + HP_ALPHA * HP_ALPHA));
+          const lpGD = (1 - LP_ALPHA) / (2 * Math.PI * fc * (1 - 2 * (1 - LP_ALPHA) * Math.cos(2 * Math.PI * fc / fs) + (1 - LP_ALPHA) * (1 - LP_ALPHA)));
+          return {
+            negotiatedFPS: actualFPS,
+            effectiveFPS: Math.round(effectiveFPS * 10) / 10,
+            totalFrames,
+            frameDropCount,
+            frameDropRate: totalFrames > 0 ? Math.round(frameDropCount / totalFrames * 10000) / 100 : 0,
+            frameDeltaMedianMs: Math.round(medianDelta * 100) / 100,
+            frameDeltaIQRMs: Math.round((q3 - q1) * 100) / 100,
+            clipHighFrames: clipHighCount,
+            clipLowFrames: clipLowCount,
+            clipRate: totalFrames > 0 ? Math.round((clipHighCount + clipLowCount) / totalFrames * 10000) / 100 : 0,
+            estimatedGroupDelayMs: Math.round((hpGD + lpGD) * 1000 * 100) / 100,
+          };
+        },
       };
     })();
 
@@ -1019,7 +1075,7 @@
               setTimeout(() => startBaseline(), 2000);
               return;
             }
-            sessionData.data.push({ type: "baseline", recordedHR: baselineBPMs.map(Math.round), totalBeats: baselineBPMs.length, ppgSampleRate: BeatDetector.getActualFPS() });
+            sessionData.data.push({ type: "baseline", recordedHR: baselineBPMs.map(Math.round), totalBeats: baselineBPMs.length, ppgSampleRate: BeatDetector.getActualFPS(), ppgDiagnostics: BeatDetector.getDiagnostics() });
             show("screen-onboarding"); document.querySelector(".onboarding-step.active").classList.remove("active");
             document.querySelector('.onboarding-step[data-step="post-baseline"]').classList.add("active");
           }
@@ -1093,7 +1149,7 @@
         sl.value = 5; vd.textContent = 5; btn.disabled = true;
         sl.oninput = () => { vd.textContent = sl.value; btn.disabled = false; };
         btn.onclick = () => {
-          const td = { type: "trial", isPractice: currentTrialIndex < 0, initialKnobValue: trialInitialKnob, instantPeriods: [...trialIP], averagePeriods: [...trialAP], knobScales: [...trialKS], currentDelays: [...trialCD], instantErrs: [...trialIE], recordedHR: [...trialRecordedHR], instantBpms: [...trialInstantBpms], toneTimings: [...trialToneTimings], fingerLossEvents: [...trialFingerLossEvents], confidence: parseInt(sl.value), bodyPos: -1 };
+          const td = { type: "trial", isPractice: currentTrialIndex < 0, initialKnobValue: trialInitialKnob, instantPeriods: [...trialIP], averagePeriods: [...trialAP], knobScales: [...trialKS], currentDelays: [...trialCD], instantErrs: [...trialIE], recordedHR: [...trialRecordedHR], instantBpms: [...trialInstantBpms], toneTimings: [...trialToneTimings], fingerLossEvents: [...trialFingerLossEvents], confidence: parseInt(sl.value), bodyPos: -1, ppgDiagnostics: BeatDetector.getDiagnostics() };
           if (currentTrialIndex >= 0 && (currentTrialIndex + 1) % BODY_MAP_EVERY === 0) {
             show("screen-bodymap");
             const parts = document.querySelectorAll(".body-part"), nb = document.getElementById("nowhere-btn"), cb = document.getElementById("confirm-bodymap-btn"), lb = document.getElementById("bodymap-selected");
