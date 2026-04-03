@@ -689,8 +689,19 @@
       }
       return {
         init() { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); lowBuf = createBeep(440, 0.08); },
+        // Schedule tone at precise AudioContext time offset (seconds from now).
+        // Returns { scheduledAt: audioCtx.currentTime value, perfNow: performance.now() at call }
+        scheduleAt(delaySec) {
+          if (!audioCtx) return null;
+          const s = audioCtx.createBufferSource();
+          s.buffer = lowBuf; s.connect(audioCtx.destination);
+          const when = audioCtx.currentTime + Math.max(0, delaySec);
+          s.start(when);
+          return { scheduledAt: when, perfNow: performance.now(), delaySec };
+        },
         playLow() { if (audioCtx) { const s = audioCtx.createBufferSource(); s.buffer = lowBuf; s.connect(audioCtx.destination); s.start(); } },
         resume() { if (audioCtx?.state === "suspended") audioCtx.resume(); },
+        getContext() { return audioCtx; },
       };
     })();
 
@@ -740,7 +751,8 @@
       const NUM_TRIALS = 20, NUM_PRACTICES = 2, BODY_MAP_EVERY = 4, KNOB_VALUE_RANGE = 1.0, BASELINE_DURATION_S = 120;
       let sessionData = { participantID: "", taskType: "", date: null, data: [] };
       let currentTrialIndex = -NUM_PRACTICES, currentKnobValue = 0, trialRunning = false, trialDetectorRunning = false;
-      let trialIP = [], trialAP = [], trialKS = [], trialCD = [], trialIE = [], trialRecordedHR = [], trialInstantBpms = []; 
+      let trialIP = [], trialAP = [], trialKS = [], trialCD = [], trialIE = [], trialRecordedHR = [], trialInstantBpms = [];
+      let trialToneTimings = [], trialFingerLossEvents = [], trialInitialKnob = 0;
       let currentInstantPeriod = 0, currentAveragePeriod = 0, baselineStartTime = 0, baselineTimer = null, baselineBPMs = [], waveBuffer = [];
       const screens = {}, WAVE_MAX = 180;
       let dialEl, dialAngle = 0, dialDragging = false, dialCx = 0, dialCy = 0, lastAngle = 0;
@@ -787,6 +799,8 @@
         }
         ctx.stroke();
       }
+
+      const MIN_BASELINE_BEATS = 80;
 
       async function startBaseline() {
         show("screen-baseline");
@@ -844,7 +858,12 @@
           document.getElementById("baseline-progress-circle").style.strokeDashoffset = circ * (1 - Math.min(1, elapsed / BASELINE_DURATION_S));
           if (remaining <= 0) {
             clearInterval(baselineTimer); await BeatDetector.stop();
-            sessionData.data.push({ type: "baseline", recordedHR: baselineBPMs.map(Math.round) });
+            if (baselineBPMs.length < MIN_BASELINE_BEATS) {
+              statusEl.textContent = `Only ${baselineBPMs.length} beats detected (need ${MIN_BASELINE_BEATS}). Restarting...`;
+              setTimeout(() => startBaseline(), 2000);
+              return;
+            }
+            sessionData.data.push({ type: "baseline", recordedHR: baselineBPMs.map(Math.round), totalBeats: baselineBPMs.length });
             show("screen-onboarding"); document.querySelector(".onboarding-step.active").classList.remove("active");
             document.querySelector('.onboarding-step[data-step="post-baseline"]').classList.add("active");
           }
@@ -854,8 +873,10 @@
       async function startTrial() {
         show("screen-trial");
         trialIP = []; trialAP = []; trialKS = []; trialCD = []; trialIE = []; trialRecordedHR = []; trialInstantBpms = [];
+        trialToneTimings = []; trialFingerLossEvents = [];
         currentInstantPeriod = 0; currentAveragePeriod = 0;
         currentKnobValue = (Math.random() * 2 - 1) * KNOB_VALUE_RANGE;
+        trialInitialKnob = currentKnobValue;
         dialAngle = ((currentKnobValue + KNOB_VALUE_RANGE) / (2 * KNOB_VALUE_RANGE)) * 2 * Math.PI - Math.PI;
         if(dialEl) dialEl.style.transform = `rotate(${dialAngle}rad)`;
         
@@ -874,7 +895,18 @@
           
           document.getElementById("trial-bpm").textContent = Math.round(beat.averageBPM);
           const dNow = delay < 0 ? currentInstantPeriod + delay : delay;
-          if (dNow > 0 && dNow < 3) setTimeout(() => { if (trialRunning) AudioEngine.playLow(); }, dNow * 1000);
+          if (dNow > 0 && dNow < 3) {
+            const timing = AudioEngine.scheduleAt(dNow);
+            if (timing) {
+              trialToneTimings.push({
+                beatDetectedAt: performance.now(),
+                beatTime: beat.time,
+                intendedDelay: dNow,
+                scheduledAt: timing.scheduledAt,
+                perfNow: timing.perfNow,
+              });
+            }
+          }
           
           if (MotionDetector.checkMovement()) {
             const w = document.getElementById("trial-movement-warning");
@@ -882,7 +914,14 @@
           }
         };
 
-        const fCb = (p) => document.getElementById("trial-finger-overlay").classList.toggle("visible", !p);
+        const fCb = (p) => {
+          document.getElementById("trial-finger-overlay").classList.toggle("visible", !p);
+          if (!p) {
+            trialFingerLossEvents.push({ lostAt: performance.now() });
+          } else if (trialFingerLossEvents.length > 0 && !trialFingerLossEvents[trialFingerLossEvents.length - 1].restoredAt) {
+            trialFingerLossEvents[trialFingerLossEvents.length - 1].restoredAt = performance.now();
+          }
+        };
 
         if (!trialDetectorRunning) {
           await BeatDetector.start({ video: document.getElementById("video-feed"), canvas: document.getElementById("sampling-canvas"), onBeatCb: beatCb, onFingerChangeCb: fCb });
@@ -898,7 +937,7 @@
         sl.value = 5; vd.textContent = 5; btn.disabled = true;
         sl.oninput = () => { vd.textContent = sl.value; btn.disabled = false; };
         btn.onclick = () => {
-          const td = { type: "trial", isPractice: currentTrialIndex < 0, instantPeriods: [...trialIP], averagePeriods: [...trialAP], knobScales: [...trialKS], currentDelays: [...trialCD], instantErrs: [...trialIE], recordedHR: [...trialRecordedHR], instantBpms: [...trialInstantBpms], confidence: parseInt(sl.value), bodyPos: -1 };
+          const td = { type: "trial", isPractice: currentTrialIndex < 0, initialKnobValue: trialInitialKnob, instantPeriods: [...trialIP], averagePeriods: [...trialAP], knobScales: [...trialKS], currentDelays: [...trialCD], instantErrs: [...trialIE], recordedHR: [...trialRecordedHR], instantBpms: [...trialInstantBpms], toneTimings: [...trialToneTimings], fingerLossEvents: [...trialFingerLossEvents], confidence: parseInt(sl.value), bodyPos: -1 };
           if (currentTrialIndex >= 0 && (currentTrialIndex + 1) % BODY_MAP_EVERY === 0) {
             show("screen-bodymap");
             const parts = document.querySelectorAll(".body-part"), nb = document.getElementById("nowhere-btn"), cb = document.getElementById("confirm-bodymap-btn"), lb = document.getElementById("bodymap-selected");
