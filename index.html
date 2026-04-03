@@ -135,7 +135,8 @@
     }
     .progress-text { font-size: 1.1rem; font-weight: 500; font-family: var(--font-mono); z-index: 3; color: var(--fg); }
 
-    .camera-preview { position: absolute; width: 80px; height: 80px; border-radius: 50%; z-index: 1; object-fit: cover; opacity: 0.3; }
+    /* Increased opacity slightly so the camera feed is visible */
+    .camera-preview { position: absolute; width: 80px; height: 80px; border-radius: 50%; z-index: 1; object-fit: cover; opacity: 0.5; }
 
     .wave-container {
       width: 100%; height: 80px;
@@ -794,12 +795,22 @@
 
         const progEl = document.getElementById("baseline-progress"), secsEl = document.getElementById("baseline-secs");
         const bpmEl = document.getElementById("baseline-bpm"), statusEl = document.getElementById("baseline-status");
+        
+        // Setup Waveform canvas
         const c = document.getElementById("wave-canvas"), dpr = window.devicePixelRatio || 1;
         c.width = c.clientWidth * dpr; c.height = c.clientHeight * dpr;
         
+        // Setup Preview canvas
+        const previewCanvas = document.getElementById("camera-preview");
+        const previewCtx = previewCanvas.getContext("2d");
+        const previewSize = 80 * dpr;
+        previewCanvas.width = previewSize; 
+        previewCanvas.height = previewSize;
+        const videoElement = document.getElementById("video-feed");
+
         let beatCount = 0;
         await BeatDetector.start({
-          video: document.getElementById("video-feed"), canvas: document.getElementById("sampling-canvas"),
+          video: videoElement, canvas: document.getElementById("sampling-canvas"),
           onBeatCb: (beat) => {
             baselineBPMs.push(beat.instantBPM); bpmEl.textContent = Math.round(beat.averageBPM);
             beatCount++; document.getElementById("baseline-beat-count").textContent = beatCount;
@@ -811,6 +822,17 @@
           },
           onPPGSampleCb: (sample) => {
             waveBuffer.push(sample); if (waveBuffer.length > WAVE_MAX) waveBuffer.shift(); drawWaveform();
+            
+            // Draw video to preview canvas
+            if (videoElement && videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
+              previewCtx.save(); 
+              previewCtx.beginPath(); 
+              previewCtx.arc(previewSize / 2, previewSize / 2, previewSize / 2, 0, Math.PI * 2); 
+              previewCtx.closePath(); 
+              previewCtx.clip();
+              previewCtx.drawImage(videoElement, 0, 0, previewSize, previewSize); 
+              previewCtx.restore();
+            }
           },
         });
 
