@@ -635,7 +635,7 @@
     // PPG BEAT DETECTOR (WABP onset, dynamic framerate, rVFC loop)
     // ============================================================
     const BeatDetector = (function () {
-      const IMAGE_SIZE = 40, MIN_BPM = 40, BUFFER_SECONDS = 8;
+      const IMAGE_SIZE = 40, BUFFER_SECONDS = 8;
       const FINGER_BRIGHTNESS_MIN = 0.15, FINGER_BRIGHTNESS_MAX = 0.98, FINGER_RED_DOMINANCE = 0.38;
 
       let videoEl, canvasEl, ctx;
@@ -674,6 +674,14 @@
       function lowpass(x) { const y = lpState.y1 + LP_ALPHA * (x - lpState.y1); lpState.y1 = y; return y; }
       function bandpass(x) { return lowpass(highpass(x)); }
       function resetFilters() { hpState = { x1: 0, y1: 0 }; lpState = { y1: 0 }; }
+
+      // Helper function to get the Median of an array (Ignores extreme outliers unlike a Mean)
+      function getMedian(arr) {
+        if (arr.length === 0) return 0;
+        const sorted = [...arr].sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+        return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+      }
 
       function extractRedMean() {
         ctx.drawImage(videoEl, 0, 0, IMAGE_SIZE, IMAGE_SIZE);
@@ -746,74 +754,71 @@
           if (onSqiUpdate) onSqiUpdate(currentSqi);
         }
 
-        // WABP onset detection with dicrotic notch rejection
+        // WABP onset detection with Robust Median-Anchored Gate
         if (fingerPresent && (now - startTime > 2000)) {
           const result = WabpDetector.processSample(filtered);
           if (result.detected) {
             const beatTime = now - (1000 / actualFPS);
             const interval = beatTime - lastBeatTime;
-            const MIN_IBI_MS = 400;
-            if (interval > MIN_IBI_MS && interval < (60000 / MIN_BPM)) {
 
-              // --- Dicrotic notch rejection ---
-              const DICROTIC_SHORT_RATIO = 0.75;
-              const DICROTIC_SUM_TOLERANCE = 0.15;
-              const DICROTIC_MIN_PERIODS = 4;
-
-              let isDicrotic = false;
-              if (recentPeriods.length >= DICROTIC_MIN_PERIODS && prevAcceptedIbi > 0) {
-                const avgMs = averagePeriod * 1000;
-                const isShort = interval < avgMs * DICROTIC_SHORT_RATIO;
-                if (isShort) {
-                  const pairSum = interval + prevAcceptedIbi;
-                  const sumDeviation = Math.abs(pairSum - avgMs) / avgMs;
-                  if (sumDeviation < DICROTIC_SUM_TOLERANCE) {
-                    isDicrotic = true;
-                  }
-                }
-              }
-
-              if (isDicrotic) {
-                lastBeatTime = prevAcceptedBeatTime;
-                if (recentPeriods.length > 0) {
-                  recentPeriods.pop();
-                  if (recentPeriods.length > 0) {
-                    averagePeriod = recentPeriods.reduce((a, b) => a + b, 0) / recentPeriods.length;
-                  }
-                }
-                dicroticRejectCount++;
-                if (onDicroticReject) onDicroticReject({
-                  time: beatTime,
-                  rejectedIbi: interval,
-                  prevIbi: prevAcceptedIbi,
-                  pairSum: interval + prevAcceptedIbi,
-                  expectedPeriod: averagePeriod * 1000
-                });
-              } else {
-                // Accept the beat
-                prevAcceptedBeatTime = lastBeatTime;
-                prevAcceptedIbi = interval;
-                lastBeatTime = beatTime;
-                instantPeriod = interval / 1000;
-                const instantBPM = 60 / instantPeriod;
-                recentPeriods.push(instantPeriod);
-                if (recentPeriods.length > MAX_RECENT_PERIODS) recentPeriods.shift();
-                averagePeriod = recentPeriods.reduce((a, b) => a + b, 0) / recentPeriods.length;
-                const averageBPM = 60 / averagePeriod;
-                if (onBeat) onBeat({ instantBPM, averageBPM, instantPeriod, averagePeriod, time: beatTime });
-              }
-            } else {
-              // Outside plausible range — bootstrap lastBeatTime for first-beat
+            // Smart Re-anchoring (Signal Drop)
+            if (lastBeatTime === 0 || interval > 2500) {
               lastBeatTime = beatTime;
+              recentPeriods = [];
+              animFrameId = requestAnimationFrame(processFrame);
+              return;
+            }
+
+            // 1. ABSOLUTE PHYSIOLOGICAL FLOOR (350ms = ~171 BPM)
+            // A hard cap. No resting human hits >171 BPM during a cognitive task.
+            if (interval < 350) {
+              animFrameId = requestAnimationFrame(processFrame);
+              return;
+            }
+
+            // 2. DYNAMIC MEDIAN SHIELD (60%)
+            // We use the MEDIAN of recent periods to block the dicrotic notch.
+            let isDicrotic = false;
+            const DICROTIC_MIN_PERIODS = 3;
+
+            if (recentPeriods.length >= DICROTIC_MIN_PERIODS) {
+              const medianMs = getMedian(recentPeriods) * 1000;
+              // 60% allows a massive +66% jump in heart rate (deep breath RSA)
+              // but blocks the notch, which reliably happens ~30-45% through the cycle.
+              if (interval < medianMs * 0.60) {
+                isDicrotic = true;
+              }
+            }
+
+            if (isDicrotic) {
+              dicroticRejectCount++;
+              if (onDicroticReject) onDicroticReject({
+                time: beatTime,
+                rejectedIbi: interval,
+                expectedPeriod: getMedian(recentPeriods) * 1000 
+              });
+              // CRUCIAL: Do NOT update lastBeatTime here. The notch is ignored completely, 
+              // allowing the next true systolic peak to be measured accurately from the previous one.
+            } else {
+              // Valid Beat!
+              prevAcceptedBeatTime = lastBeatTime;
+              prevAcceptedIbi = interval;
+              lastBeatTime = beatTime;
+              
+              instantPeriod = interval / 1000;
+              const instantBPM = 60 / instantPeriod;
+              
+              recentPeriods.push(instantPeriod);
+              if (recentPeriods.length > MAX_RECENT_PERIODS) recentPeriods.shift();
+              
+              averagePeriod = recentPeriods.reduce((a, b) => a + b, 0) / recentPeriods.length;
+              const averageBPM = 60 / averagePeriod;
+              
+              if (onBeat) onBeat({ instantBPM, averageBPM, instantPeriod, averagePeriod, time: beatTime });
             }
           }
         }
 
-        // Use requestAnimationFrame for consistent UI updates.
-        // requestVideoFrameCallback was tried but causes visible waveform stuttering
-        // when the ISP drops framerate (common with finger-on-lens). rAF runs at
-        // display refresh rate regardless of camera framerate. Duplicate frames
-        // produce zero-slope samples in the WABP detector which are harmless.
         animFrameId = requestAnimationFrame(processFrame);
       }
 
