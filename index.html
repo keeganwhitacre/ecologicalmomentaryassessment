@@ -18,6 +18,8 @@
       --accent-blue: #3b82f6; /* Medical blue for primary actions */
       --accent-blue-hover: #2563eb;
       --accent-red: #ef4444; /* Clean red for cardiac elements */
+      --accent-green: #10b981;
+      --accent-yellow: #f59e0b;
       --radius: 8px; /* Sharper, more professional corners */
       --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       --font-mono: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
@@ -69,7 +71,7 @@
     .btn-outline:active { background: var(--bg-card); }
     .btn-outline.selected { border-color: var(--accent-blue); background: rgba(59, 130, 246, 0.1); color: var(--accent-blue); }
     .btn-block { width: 100%; }
-    .spacer { flex: 1; }
+    .spacer { flex: 1; min-height: 20px; }
 
     /* ---- Forms & Inputs ---- */
     .input-group { width: 100%; max-width: 320px; text-align: left; margin-bottom: 24px; }
@@ -97,6 +99,36 @@
       padding: 16px; border-radius: var(--radius); margin-top: 8px;
     }
     .warning-box p { color: #fca5a5; margin-bottom: 0; font-size: 0.95rem; }
+
+    /* ---- EMA Specific Styles ---- */
+    .ema-section { display: none; flex-direction: column; width: 100%; max-width: 340px; margin: 0 auto; }
+    .ema-section.active { display: flex; }
+    
+    .slider-group { width: 100%; margin-bottom: 36px; }
+    .slider-header { display: flex; justify-content: space-between; align-items: baseline; }
+    .slider-val-display { font-family: var(--font-mono); font-size: 0.9rem; font-weight: 600; color: var(--accent-blue); }
+    
+    .range-slider {
+      -webkit-appearance: none; width: 100%; height: 6px;
+      border-radius: 3px; outline: none; background: var(--border);
+      position: relative; margin-bottom: 12px; margin-top: 12px;
+    }
+    .range-slider::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--accent-blue);
+      cursor: pointer; border: 2px solid var(--bg);
+    }
+    .slider-labels { display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 500; color: var(--fg-muted); }
+
+    /* Activity Bubbles */
+    .bubble-group { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; margin-bottom: 36px; }
+    .bubble {
+      padding: 10px 16px; border-radius: 20px; border: 1px solid var(--border);
+      background: var(--bg-card); color: var(--fg); font-size: 0.9rem; font-weight: 500;
+      cursor: pointer; transition: all 0.2s; user-select: none; -webkit-tap-highlight-color: transparent;
+    }
+    .bubble.selected { background: var(--accent-blue); border-color: var(--accent-blue); color: #fff; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
 
     /* ---- Finger overlay ---- */
     .finger-overlay {
@@ -135,7 +167,6 @@
     }
     .progress-text { font-size: 1.1rem; font-weight: 500; font-family: var(--font-mono); z-index: 3; color: var(--fg); }
 
-    /* Increased opacity slightly so the camera feed is visible */
     .camera-preview { position: absolute; width: 80px; height: 80px; border-radius: 50%; z-index: 1; object-fit: cover; opacity: 0.5; }
 
     .wave-container {
@@ -151,7 +182,7 @@
     }
     .baseline-stat { text-align: center; }
     .baseline-stat-value { font-family: var(--font-mono); font-size: 1.2rem; color: var(--fg); margin-top: 4px; }
-    .baseline-status { font-size: 0.85rem; color: var(--fg-muted); text-align: center; min-height: 1.2em; }
+    .baseline-status { font-size: 0.85rem; color: var(--fg-muted); text-align: center; min-height: 1.2em; transition: color 0.3s; }
 
     /* ---- Trial (Clean Dial) ---- */
     #screen-trial { align-items: center; justify-content: space-between; }
@@ -215,21 +246,6 @@
     }
     .movement-warning.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-    /* ---- EMA Sliders ---- */
-    .slider-group { width: 100%; max-width: 320px; margin-bottom: 32px; }
-    .range-slider {
-      -webkit-appearance: none; width: 100%; height: 6px;
-      border-radius: 3px; outline: none; background: var(--border);
-      position: relative; margin-bottom: 12px; margin-top: 8px;
-    }
-    .range-slider::-webkit-slider-thumb {
-      -webkit-appearance: none; appearance: none;
-      width: 28px; height: 28px; border-radius: 50%;
-      background: var(--accent-blue);
-      cursor: pointer; border: 2px solid var(--bg);
-    }
-    .slider-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--fg-muted); }
-
     /* ---- Body map ---- */
     #screen-bodymap { justify-content: center; align-items: center; gap: 16px; }
     .body-map-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; max-width: 320px; }
@@ -271,35 +287,85 @@
   </div>
 
   <!-- ========================================== -->
-  <!-- PATH A: DAILY EMA SURVEY (The 3x a day task) -->
+  <!-- PATH A: ECOLOGICAL MOMENTARY ASSESSMENT    -->
   <!-- ========================================== -->
   <div class="screen" id="screen-ema">
-    <div class="spacer"></div>
-    <h1 style="text-align: center; margin-bottom: 32px;">Daily Check-In</h1>
+    <h1 id="ema-title" style="text-align: center; margin-bottom: 24px; margin-top: 16px;">Check-In</h1>
     
-    <div class="slider-group" style="margin: 0 auto 32px;">
-      <label class="label">1. How connected to your body do you feel right now?</label>
-      <input type="range" class="range-slider" id="ema-connected" min="0" max="100" value="50">
-      <div class="slider-labels"><span>Not at all</span><span>Extremely</span></div>
+    <!-- MORNING QUESTIONS -->
+    <div class="ema-section" id="ema-morning-section">
+      <div class="slider-group">
+        <div class="slider-header">
+          <label class="label">1. Hours of sleep last night</label>
+          <span class="slider-val-display" id="ema-sleep-val">7.0 hrs</span>
+        </div>
+        <input type="range" class="range-slider" id="ema-sleep" min="0" max="12" step="0.5" value="7" oninput="document.getElementById('ema-sleep-val').textContent = this.value + (this.value==12?'+ hrs':' hrs')">
+        <div class="slider-labels"><span>0</span><span>12+</span></div>
+      </div>
+
+      <div class="slider-group">
+        <label class="label">2. Quality of your sleep</label>
+        <input type="range" class="range-slider" id="ema-sleep-qual" min="0" max="100" value="50">
+        <div class="slider-labels"><span>Very Poor</span><span>Very Good</span></div>
+      </div>
+
+      <div class="slider-group">
+        <label class="label">3. How physically rested do you feel?</label>
+        <input type="range" class="range-slider" id="ema-rested" min="0" max="100" value="50">
+        <div class="slider-labels"><span>Exhausted</span><span>Fully Energized</span></div>
+      </div>
     </div>
 
-    <div class="slider-group" style="margin: 0 auto 32px;">
-      <label class="label">2. How stressed or anxious do you feel?</label>
-      <input type="range" class="range-slider" id="ema-stress" min="0" max="100" value="50">
-      <div class="slider-labels"><span>Not at all</span><span>Extremely</span></div>
-    </div>
+    <!-- AFTERNOON / EVENING QUESTIONS -->
+    <div class="ema-section" id="ema-day-section">
+      <div class="slider-group">
+        <label class="label">1. Focus on internal physical sensations</label>
+        <input type="range" class="range-slider" id="ema-focus" min="0" max="100" value="50">
+        <div class="slider-labels"><span>Not at all</span><span>Highly focused</span></div>
+      </div>
 
-    <div class="input-group" style="margin: 0 auto 32px;">
-      <label class="label">3. Describe your current physical sensations:</label>
-      <textarea id="ema-text" placeholder="e.g., My shoulders feel tight, breathing is shallow..."></textarea>
+      <div class="slider-group">
+        <label class="label">2. Comfort of physical sensations</label>
+        <input type="range" class="range-slider" id="ema-comfort" min="0" max="100" value="50">
+        <div class="slider-labels"><span>Highly Distressing</span><span>Highly Comfortable</span></div>
+      </div>
+
+      <div class="slider-group">
+        <label class="label">3. Overall Mood (Valence)</label>
+        <input type="range" class="range-slider" id="ema-valence" min="0" max="100" value="50">
+        <div class="slider-labels"><span>Extremely Negative</span><span>Extremely Positive</span></div>
+      </div>
+
+      <div class="slider-group">
+        <label class="label">4. Energy Level (Arousal)</label>
+        <input type="range" class="range-slider" id="ema-arousal" min="0" max="100" value="50">
+        <div class="slider-labels"><span>Completely Drained</span><span>Highly Energized</span></div>
+      </div>
+
+      <div style="margin-bottom: 8px;">
+        <label class="label">5. Current Activity</label>
+        <div class="bubble-group" id="activity-bubbles">
+          <div class="bubble" data-val="resting">Sitting/Resting</div>
+          <div class="bubble" data-val="working">Working/Studying</div>
+          <div class="bubble" data-val="active">Physical Activity</div>
+          <div class="bubble" data-val="transit">In Transit</div>
+          <div class="bubble" data-val="other">Other</div>
+        </div>
+      </div>
+
+      <div class="slider-group">
+        <label class="label">6. Social Context</label>
+        <input type="range" class="range-slider" id="ema-social" min="0" max="1" step="1" value="0">
+        <div class="slider-labels"><span>Alone</span><span>With Others</span></div>
+      </div>
     </div>
 
     <div class="spacer"></div>
-    <button class="btn btn-primary btn-block" id="submit-ema-btn" style="max-width:320px; margin: 0 auto;">Submit Check-In</button>
+    <button class="btn btn-primary btn-block" id="submit-ema-btn" style="max-width:340px; margin: 0 auto;">Submit Check-In</button>
   </div>
 
   <!-- ========================================== -->
-  <!-- PATH B: PHASE ADJUSTMENT TASK (The 1x task) -->
+  <!-- PATH B: PHASE ADJUSTMENT TASK              -->
   <!-- ========================================== -->
 
   <!-- 2. Onboarding -->
@@ -557,7 +623,7 @@
         SAMPLE_RATE      = sampleRate || 30;
         EYE_CLS_SAMPLES  = Math.round(0.25  * SAMPLE_RATE);
         SLP_WINDOW       = Math.max(2, Math.round(0.13 * SAMPLE_RATE));
-        NDP_SAMPLES = Math.round(2.5   * SAMPLE_RATE);
+        NDP_SAMPLES      = Math.round(2.5   * SAMPLE_RATE);
         LPERIOD_SAMPLES  = Math.round(8.0   * SAMPLE_RATE);
         INIT_WINDOW      = Math.round(8.0   * SAMPLE_RATE);
         slopeBuffer = []; slopeEnergyBuffer = [];
@@ -675,7 +741,6 @@
       function bandpass(x) { return lowpass(highpass(x)); }
       function resetFilters() { hpState = { x1: 0, y1: 0 }; lpState = { y1: 0 }; }
 
-      // Helper function to get the Median of an array (Ignores extreme outliers unlike a Mean)
       function getMedian(arr) {
         if (arr.length === 0) return 0;
         const sorted = [...arr].sort((a, b) => a - b);
@@ -695,8 +760,6 @@
 
         const looksLikeFinger = brightness > FINGER_BRIGHTNESS_MIN && brightness < FINGER_BRIGHTNESS_MAX && redRatio > FINGER_RED_DOMINANCE;
 
-        // Track ISP clipping: if brightness saturates high or low, the AC pulse
-        // component is being crushed by auto-exposure. Flag for post-hoc QC.
         lastBrightness = brightness;
         if (brightness > 0.95) clipHighCount++;
         else if (brightness < 0.05 && fingerPresent) clipLowCount++;
@@ -736,8 +799,7 @@
         if (lastFrameTime > 0) {
           const dt = now - lastFrameTime;
           frameDeltaBuffer.push(dt);
-          if (frameDeltaBuffer.length > 300) frameDeltaBuffer.shift(); // keep last ~5-10s
-          // Flag frame drops: if dt > 2x expected interval, the ISP dropped frames
+          if (frameDeltaBuffer.length > 300) frameDeltaBuffer.shift(); 
           const expectedInterval = 1000 / actualFPS;
           if (dt > expectedInterval * 2) frameDropCount++;
         }
@@ -747,21 +809,18 @@
         if (rawBuffer.length > BUFFER_SIZE) { rawBuffer.shift(); timeBuffer.shift(); filteredBuffer.shift(); }
         if (onPPGSample) onPPGSample(filtered);
 
-        // Recompute SQI every SQI_INTERVAL_MS
         if (fingerPresent && (now - lastSqiTime > SQI_INTERVAL_MS)) {
           currentSqi = computeSqi();
           lastSqiTime = now;
           if (onSqiUpdate) onSqiUpdate(currentSqi);
         }
 
-        // WABP onset detection with Robust Median-Anchored Gate
         if (fingerPresent && (now - startTime > 2000)) {
           const result = WabpDetector.processSample(filtered);
           if (result.detected) {
             const beatTime = now - (1000 / actualFPS);
             const interval = beatTime - lastBeatTime;
 
-            // Smart Re-anchoring (Signal Drop)
             if (lastBeatTime === 0 || interval > 2500) {
               lastBeatTime = beatTime;
               recentPeriods = [];
@@ -769,22 +828,16 @@
               return;
             }
 
-            // 1. ABSOLUTE PHYSIOLOGICAL FLOOR (350ms = ~171 BPM)
-            // A hard cap. No resting human hits >171 BPM during a cognitive task.
             if (interval < 350) {
               animFrameId = requestAnimationFrame(processFrame);
               return;
             }
 
-            // 2. DYNAMIC MEDIAN SHIELD (60%)
-            // We use the MEDIAN of recent periods to block the dicrotic notch.
             let isDicrotic = false;
             const DICROTIC_MIN_PERIODS = 3;
 
             if (recentPeriods.length >= DICROTIC_MIN_PERIODS) {
               const medianMs = getMedian(recentPeriods) * 1000;
-              // 60% allows a massive +66% jump in heart rate (deep breath RSA)
-              // but blocks the notch, which reliably happens ~30-45% through the cycle.
               if (interval < medianMs * 0.60) {
                 isDicrotic = true;
               }
@@ -797,10 +850,7 @@
                 rejectedIbi: interval,
                 expectedPeriod: getMedian(recentPeriods) * 1000 
               });
-              // CRUCIAL: Do NOT update lastBeatTime here. The notch is ignored completely, 
-              // allowing the next true systolic peak to be measured accurately from the previous one.
             } else {
-              // Valid Beat!
               prevAcceptedBeatTime = lastBeatTime;
               prevAcceptedIbi = interval;
               lastBeatTime = beatTime;
@@ -834,7 +884,6 @@
         const cameras = devices.filter((d) => d.kind === "videoinput");
         let torchWorking = false;
 
-        // Rank cameras: want standard wide back camera, skip ultra-wide/telephoto/virtual composites
         const ranked = [];
         for (const cam of cameras) {
           const label = (cam.label || "").toLowerCase();
@@ -876,7 +925,6 @@
           }
         }
 
-        // Read back actual framerate from the hardware
         if (stream) {
           const settings = stream.getVideoTracks()[0].getSettings();
           actualFPS = settings.frameRate || 30;
@@ -902,15 +950,12 @@
           onSqiUpdate = onSqiUpdateCb || null; onDicroticReject = onDicroticRejectCb || null;
           rawBuffer = []; timeBuffer = []; filteredBuffer = []; recentPeriods = [];
           lastBeatTime = 0; fingerPresent = false; fingerDebounceCount = 0;
-          // Reset dicrotic state
           prevAcceptedIbi = 0; prevAcceptedBeatTime = 0; dicroticRejectCount = 0;
-          // Reset SQI state
           lastSqiTime = 0; currentSqi = 0;
-          // Reset diagnostics
           lastFrameTime = 0; frameDeltaBuffer = []; frameDropCount = 0; totalFrames = 0;
           clipHighCount = 0; clipLowCount = 0; lastBrightness = 0;
+          
           await startCamera();
-          // Recompute filter coefficients and WABP constants for actual framerate
           computeFilterCoeffs(actualFPS); resetFilters();
           WabpDetector.reset(actualFPS);
           startTime = Date.now(); running = true; processFrame();
@@ -923,18 +968,14 @@
         getActualFPS() { return actualFPS; },
         getSqi() { return currentSqi; },
         getDicroticRejectCount() { return dicroticRejectCount; },
-        /** Return frame timing and clipping diagnostics for session QC */
         getDiagnostics() {
           const deltas = frameDeltaBuffer;
           const meanDelta = deltas.length > 0 ? deltas.reduce((a, b) => a + b, 0) / deltas.length : 0;
           const sortedDeltas = [...deltas].sort((a, b) => a - b);
           const medianDelta = sortedDeltas.length > 0 ? sortedDeltas[Math.floor(sortedDeltas.length / 2)] : 0;
-          // Effective FPS from actual frame deltas (more accurate than getSettings)
           const effectiveFPS = medianDelta > 0 ? 1000 / medianDelta : actualFPS;
-          // Jitter: IQR of frame deltas
           const q1 = sortedDeltas[Math.floor(sortedDeltas.length * 0.25)] || 0;
           const q3 = sortedDeltas[Math.floor(sortedDeltas.length * 0.75)] || 0;
-          // Group delay estimate for the bandpass filter at 1.2 Hz (typical cardiac)
           const fc = 1.2, fs = effectiveFPS;
           const hpGD = (1 - HP_ALPHA) / (2 * Math.PI * fc * (1 - 2 * HP_ALPHA * Math.cos(2 * Math.PI * fc / fs) + HP_ALPHA * HP_ALPHA));
           const lpGD = (1 - LP_ALPHA) / (2 * Math.PI * fc * (1 - 2 * (1 - LP_ALPHA) * Math.cos(2 * Math.PI * fc / fs) + (1 - LP_ALPHA) * (1 - LP_ALPHA)));
@@ -967,8 +1008,6 @@
       }
       return {
         init() { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); lowBuf = createBeep(440, 0.08); },
-        // Schedule tone at precise AudioContext time offset (seconds from now).
-        // Returns { scheduledAt: audioCtx.currentTime value, perfNow: performance.now() at call }
         scheduleAt(delaySec) {
           if (!audioCtx) return null;
           const s = audioCtx.createBufferSource();
@@ -1027,11 +1066,14 @@
     // ============================================================
     const App = (function () {
       const NUM_TRIALS = 20, NUM_PRACTICES = 2, BODY_MAP_EVERY = 4, KNOB_VALUE_RANGE = 1.0, BASELINE_DURATION_S = 120;
+      
+      let isMorningEMA = false;
+      let selectedActivity = null;
+
       function collectDeviceMetadata() {
         const ua = navigator.userAgent;
         let deviceModel = 'Unknown', osName = 'Unknown', osVersion = '', browserName = 'Unknown', browserVersion = '';
 
-        // OS detection
         if (/iPhone/.test(ua)) { deviceModel = 'iPhone'; osName = 'iOS'; const m = ua.match(/OS (\d+[_\.]\d+[_\.]?\d*)/); if (m) osVersion = m[1].replace(/_/g, '.'); }
         else if (/iPad/.test(ua)) { deviceModel = 'iPad'; osName = 'iPadOS'; const m = ua.match(/OS (\d+[_\.]\d+[_\.]?\d*)/); if (m) osVersion = m[1].replace(/_/g, '.'); }
         else if (/Android/.test(ua)) { osName = 'Android'; const m = ua.match(/Android ([\d.]+)/); if (m) osVersion = m[1]; const dm = ua.match(/;\s*([^;)]+)\s*Build\//); if (dm) deviceModel = dm[1].trim(); else deviceModel = 'Android Device'; }
@@ -1039,7 +1081,6 @@
         else if (/Windows/.test(ua)) { osName = 'Windows'; const m = ua.match(/Windows NT ([\d.]+)/); if (m) osVersion = m[1]; deviceModel = 'PC'; }
         else if (/Linux/.test(ua)) { osName = 'Linux'; deviceModel = 'PC'; }
 
-        // Browser detection
         if (/CriOS\/([\d.]+)/.test(ua)) { browserName = 'Chrome (iOS)'; browserVersion = ua.match(/CriOS\/([\d.]+)/)[1]; }
         else if (/FxiOS\/([\d.]+)/.test(ua)) { browserName = 'Firefox (iOS)'; browserVersion = ua.match(/FxiOS\/([\d.]+)/)[1]; }
         else if (/EdgiOS\/([\d.]+)/.test(ua)) { browserName = 'Edge (iOS)'; browserVersion = ua.match(/EdgiOS\/([\d.]+)/)[1]; }
@@ -1173,11 +1214,27 @@
           onBeatCb: (beat) => {
             baselineBPMs.push(beat.instantBPM); bpmEl.textContent = Math.round(beat.averageBPM);
             beatCount++; document.getElementById("baseline-beat-count").textContent = beatCount;
-            if (beatCount > 10) statusEl.textContent = "Recording data...";
           },
           onFingerChangeCb: (p) => {
             document.getElementById("baseline-finger-overlay").classList.toggle("visible", !p);
-            statusEl.textContent = p ? "Signal found..." : "Awaiting contact...";
+            if (!p) {
+               statusEl.textContent = "Awaiting contact...";
+               statusEl.style.color = "var(--fg-muted)";
+            }
+          },
+          onSqiUpdateCb: (sqi) => {
+            if (document.getElementById("baseline-finger-overlay").classList.contains("visible")) return; 
+            
+            if (sqi >= 0.008) {
+              statusEl.textContent = "Perfect pressure. Hold still.";
+              statusEl.style.color = "var(--accent-green)"; 
+            } else if (sqi >= 0.004) {
+              statusEl.textContent = "Good signal. Recording...";
+              statusEl.style.color = "var(--fg-muted)";
+            } else {
+              statusEl.textContent = "Signal weak: Try pressing slightly lighter.";
+              statusEl.style.color = "var(--accent-yellow)"; 
+            }
           },
           onPPGSampleCb: (sample) => {
             waveBuffer.push(sample); if (waveBuffer.length > WAVE_MAX) waveBuffer.shift(); drawWaveform();
@@ -1201,22 +1258,45 @@
           progEl.textContent = Math.round(Math.min(1, elapsed / BASELINE_DURATION_S) * 100) + "%";
           secsEl.textContent = Math.ceil(remaining);
           document.getElementById("baseline-progress-circle").style.strokeDashoffset = circ * (1 - Math.min(1, elapsed / BASELINE_DURATION_S));
+          
           if (remaining <= 0) {
             clearInterval(baselineTimer);
-            // DON'T stop the detector — preserve WABP calibrated thresholds and
-            // camera stream for the trial phase. Just null out the callbacks so
-            // beats aren't processed during the instruction screens.
             BeatDetector.setCallbacks({ onBeatCb: null, onFingerChangeCb: null, onPPGSampleCb: null, onSqiUpdateCb: null, onDicroticRejectCb: null });
-            trialDetectorRunning = true; // so startTrial() uses setCallbacks instead of restart
+            trialDetectorRunning = true; 
+            
+            const diagnostics = BeatDetector.getDiagnostics();
+            const finalSqi = BeatDetector.getSqi();
+
+            // 1. Check for sufficient beats
             if (baselineBPMs.length < MIN_BASELINE_BEATS) {
-              // Baseline failed — DO stop and restart from scratch
               await BeatDetector.stop(); trialDetectorRunning = false;
-              statusEl.textContent = `Only ${baselineBPMs.length} beats detected (need ${MIN_BASELINE_BEATS}). Restarting...`;
-              setTimeout(() => startBaseline(), 2000);
+              statusEl.textContent = `Only ${baselineBPMs.length} beats detected. Restarting...`;
+              statusEl.style.color = "var(--accent-red)";
+              setTimeout(() => startBaseline(), 3000);
               return;
             }
-            sessionData.data.push({ type: "baseline", recordedHR: baselineBPMs.map(Math.round), totalBeats: baselineBPMs.length, ppgSampleRate: BeatDetector.getActualFPS(), ppgDiagnostics: BeatDetector.getDiagnostics() });
-            show("screen-onboarding"); document.querySelector(".onboarding-step.active").classList.remove("active");
+            
+            // 2. Check for severe clipping (Auto-exposure ruined the signal)
+            if (diagnostics.clipRate > 20) {
+               await BeatDetector.stop(); trialDetectorRunning = false;
+               statusEl.textContent = `Light leakage detected. Ensure your finger covers the flash completely. Restarting...`;
+               statusEl.style.color = "var(--accent-red)";
+               setTimeout(() => startBaseline(), 4000);
+               return;
+            }
+
+            // 3. Check for terrible SQI at the end of the baseline
+            if (finalSqi < 0.002) {
+               await BeatDetector.stop(); trialDetectorRunning = false;
+               statusEl.textContent = `Signal quality too low. Remember to press gently. Restarting...`;
+               statusEl.style.color = "var(--accent-red)";
+               setTimeout(() => startBaseline(), 4000);
+               return;
+            }
+
+            sessionData.data.push({ type: "baseline", recordedHR: baselineBPMs.map(Math.round), totalBeats: baselineBPMs.length, ppgSampleRate: BeatDetector.getActualFPS(), ppgDiagnostics: diagnostics, finalSqi: finalSqi });
+            show("screen-onboarding"); 
+            document.querySelector(".onboarding-step.active").classList.remove("active");
             document.querySelector('.onboarding-step[data-step="post-baseline"]').classList.add("active");
           }
         }, 1000);
@@ -1340,18 +1420,21 @@
         };
       }
 
-      async function endTrial(td) {
-        sessionData.data.push(td); currentTrialIndex++;
-        if (currentTrialIndex >= NUM_TRIALS) {
-          trialDetectorRunning = false; await BeatDetector.stop(); WakeLockCtrl.release(); show("screen-end");
-        } else { startTrial(); }
-      }
-
       function submitEMA() {
-        const c = document.getElementById("ema-connected").value;
-        const s = document.getElementById("ema-stress").value;
-        const t = document.getElementById("ema-text").value;
-        sessionData.data.push({ type: "ema", connected: c, stress: s, text: t });
+        const data = { type: "ema_response", session: isMorningEMA ? "morning" : "day" };
+        if (isMorningEMA) {
+          data.sleepHours = document.getElementById("ema-sleep").value;
+          data.sleepQuality = document.getElementById("ema-sleep-qual").value;
+          data.feelingRested = document.getElementById("ema-rested").value;
+        } else {
+          data.focusInternal = document.getElementById("ema-focus").value;
+          data.sensationsComfort = document.getElementById("ema-comfort").value;
+          data.valence = document.getElementById("ema-valence").value;
+          data.arousal = document.getElementById("ema-arousal").value;
+          data.activity = selectedActivity || "unanswered";
+          data.socialContext = document.getElementById("ema-social").value === "1" ? "with_others" : "alone";
+        }
+        sessionData.data.push(data);
         show("screen-end");
       }
 
@@ -1360,10 +1443,19 @@
           screens.active = document.getElementById("screen-participant");
           initDial(); AudioEngine.init();
 
+          // Bubble selection logic
+          document.querySelectorAll('.bubble').forEach(b => {
+            b.onclick = () => {
+              document.querySelectorAll('.bubble').forEach(ob => ob.classList.remove('selected'));
+              b.classList.add('selected');
+              selectedActivity = b.dataset.val;
+            };
+          });
+
           // URL Parsing logic
           const urlParams = new URLSearchParams(window.location.search);
           const urlId = urlParams.get('id');
-          const sessionType = urlParams.get('session'); // 'pat' or 'ema'
+          const sessionType = urlParams.get('session') || '';
           
           // Theme injection logic
           const THEMES = {
@@ -1381,7 +1473,22 @@
           }
 
           if (urlId) document.getElementById('participant-input').value = urlId;
-          if (sessionType === 'ema') document.getElementById('task-subtitle').textContent = "Daily Check-In";
+
+          if (sessionType.startsWith('ema')) {
+            sessionData.taskType = "EMA";
+            isMorningEMA = sessionType === 'emamorning';
+            
+            if (isMorningEMA) {
+              document.getElementById('task-subtitle').textContent = "Morning Check-In";
+              document.getElementById('ema-title').textContent = "Good Morning";
+            } else if (sessionType === 'emaevening') {
+              document.getElementById('task-subtitle').textContent = "Evening Check-In";
+              document.getElementById('ema-title').textContent = "Good Evening";
+            } else {
+              document.getElementById('task-subtitle').textContent = "Afternoon Check-In";
+              document.getElementById('ema-title').textContent = "Check-In";
+            }
+          }
 
           document.getElementById("start-btn").onclick = () => {
             const pid = document.getElementById("participant-input").value.trim();
@@ -1391,9 +1498,13 @@
             sessionData.detectionAlgorithm = 'wabp_onset';
             AudioEngine.resume();
 
-            if (sessionType === 'ema') {
-              sessionData.taskType = "EMA";
+            if (sessionData.taskType === "EMA") {
               show("screen-ema");
+              if (isMorningEMA) {
+                document.getElementById("ema-morning-section").classList.add("active");
+              } else {
+                document.getElementById("ema-day-section").classList.add("active");
+              }
             } else {
               sessionData.taskType = "PAT";
               show("screen-onboarding");
