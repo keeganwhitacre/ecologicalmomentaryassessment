@@ -447,8 +447,7 @@
                 const onsetThresh = maxVal * 0.02; let onsetIdx = seLen - 2;
                 for (let j = seLen-2; j >= Math.max(0, seLen-2-halfEye); j--) { if (j > 0 && (slopeEnergyBuffer[j] - slopeEnergyBuffer[j-1]) < onsetThresh) { onsetIdx = j; break; } }
                 Ta += (maxVal - Ta) / 10; T1 = Ta / 3; lastOnsetIndex = sampleIndex; noDetectTimer = 0;
-                // Expose peakEnergy (maxVal) for the energy-gating logic
-                return { detected: true, peakEnergy: maxVal };
+                return { detected: true };
               }
             }
           }
@@ -476,14 +475,9 @@
       let onBeat = null, onFingerChange = null, onPPGSample = null, onSqiUpdate = null, onDicroticReject = null, onAnchorReset = null;
       let actualFPS = 30;
 
-      // --- Dicrotic notch rejection state ---
       let prevAcceptedIbi = 0;       
       let prevAcceptedBeatTime = 0;  
       let dicroticRejectCount = 0;   
-
-      // --- Energy-Gated Morphology State ---
-      let recentEnergies = [];
-      let averagePeakEnergy = 0;
 
       let hpState = { x1: 0, y1: 0 }, lpState = { y1: 0 };
       let HP_ALPHA, LP_ALPHA;
@@ -495,6 +489,15 @@
       function lowpass(x) { const y = lpState.y1 + LP_ALPHA * (x - lpState.y1); lpState.y1 = y; return y; }
       function bandpass(x) { return lowpass(highpass(x)); }
       function resetFilters() { hpState = { x1: 0, y1: 0 }; lpState = { y1: 0 }; }
+
+      // Helper function to get the Median of an array
+      // A median filter mathematically ignores extreme outliers (unlike a Mean)
+      function getMedian(arr) {
+        if (arr.length === 0) return 0;
+        const sorted = [...arr].sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+        return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+      }
 
       function extractRedMean() {
         ctx.drawImage(videoEl, 0, 0, IMAGE_SIZE, IMAGE_SIZE);
@@ -553,40 +556,42 @@
           if (result.detected) {
             const beatTime = now - (1000 / actualFPS);
             const interval = beatTime - lastBeatTime;
-            const currentEnergy = result.peakEnergy; // Grab the amplitude power!
 
-            // Smart Re-anchoring.
+            // Smart Re-anchoring (Signal Drop)
             if (lastBeatTime === 0 || interval > 2500) {
               lastBeatTime = beatTime;
               recentPeriods = [];
-              recentEnergies = []; // Clear energy memory too
               if (onAnchorReset && interval > 2500) onAnchorReset();
               animFrameId = requestAnimationFrame(processFrame);
               return;
             }
 
-            // Silent Anchor Reset Prevention (Hard noise lockout).
-            if (interval < 300) {
+            // --- THE MEDIAN-ANCHORED GATES ---
+            
+            // 1. ABSOLUTE PHYSIOLOGICAL FLOOR (350ms = 171 BPM)
+            // A hard cap. No resting human hits 171 BPM. Period.
+            // Do NOT update lastBeatTime.
+            if (interval < 350) {
               animFrameId = requestAnimationFrame(processFrame);
               return;
             }
 
-            // --- Energy-Gated Refractory Period ---
+            // 2. DYNAMIC MEDIAN SHIELD (60%)
+            // We use the MEDIAN (not the mean) of recent periods.
+            // A median cannot be poisoned by a single fast outlier, completely 
+            // neutralizing the "death spiral" effect.
             let isDicrotic = false;
             const DICROTIC_MIN_PERIODS = 3;
 
-            if (recentPeriods.length >= DICROTIC_MIN_PERIODS && averagePeakEnergy > 0) {
-              const avgMs = averagePeriod * 1000;
+            if (recentPeriods.length >= DICROTIC_MIN_PERIODS) {
+              // Get the median period in milliseconds
+              const medianMs = getMedian(recentPeriods) * 1000;
               
-              // 1. Is it early? (Less than 80% of average interval)
-              // This is permissive enough to allow natural HRV/RSA to pass the time gate...
-              if (interval < avgMs * 0.80) {
-                
-                // 2. Is it weak? (Less than 50% of average peak power)
-                // ...but if it is BOTH early AND weak, it is mathematically a dicrotic notch.
-                if (currentEnergy < averagePeakEnergy * 0.5) {
-                  isDicrotic = true;
-                }
+              // 60% allows a massive +66% jump in heart rate (deep breath RSA)
+              // but blocks the dicrotic notch, which reliably happens ~30-45% 
+              // through the full cardiac cycle.
+              if (interval < medianMs * 0.60) {
+                isDicrotic = true;
               }
             }
 
@@ -595,11 +600,10 @@
               if (onDicroticReject) onDicroticReject({
                 time: beatTime,
                 rejectedIbi: interval,
-                expectedPeriod: averagePeriod * 1000,
-                energy: currentEnergy,
-                expectedEnergy: averagePeakEnergy
+                // Log the median to show it isn't being poisoned
+                expectedPeriod: getMedian(recentPeriods) * 1000 
               });
-              // CRUCIAL: Do NOT update lastBeatTime here.
+              // CRUCIAL: Do NOT update lastBeatTime here. The notch is ignored.
             } else {
               // Valid Beat!
               prevAcceptedBeatTime = lastBeatTime;
@@ -609,17 +613,13 @@
               instantPeriod = interval / 1000;
               const instantBPM = 60 / instantPeriod;
               
-              // Update Period Averages
               recentPeriods.push(instantPeriod);
               if (recentPeriods.length > MAX_RECENT_PERIODS) recentPeriods.shift();
+              
+              // Calculate standard mean average for UI display
               averagePeriod = recentPeriods.reduce((a, b) => a + b, 0) / recentPeriods.length;
-              
-              // Update Morphology Averages
-              recentEnergies.push(currentEnergy);
-              if (recentEnergies.length > MAX_RECENT_PERIODS) recentEnergies.shift();
-              averagePeakEnergy = recentEnergies.reduce((a, b) => a + b, 0) / recentEnergies.length;
-              
               const averageBPM = 60 / averagePeriod;
+              
               if (onBeat) onBeat({ instantBPM, averageBPM, instantPeriod, averagePeriod, time: beatTime });
             }
           }
@@ -674,9 +674,6 @@
           onBeat = onBeatCb; onFingerChange = onFingerChangeCb; onPPGSample = onPPGSampleCb || null;
           onSqiUpdate = onSqiUpdateCb || null; onDicroticReject = onDicroticRejectCb || null; onAnchorReset = onAnchorResetCb || null;
           rawBuffer = []; timeBuffer = []; filteredBuffer = []; recentPeriods = [];
-          
-          // Reset energy state on start
-          recentEnergies = []; averagePeakEnergy = 0;
           
           lastBeatTime = 0; fingerPresent = false; fingerDebounceCount = 0;
           lastSqiTime = 0; currentSqi = 0;
@@ -1120,10 +1117,7 @@
             const logLine = document.createElement('div');
             logLine.className = 'bad';
             
-            // Show the energy drop percentage!
-            const energyPct = Math.round((info.energy / info.expectedEnergy) * 100);
-            
-            logLine.textContent = `[${elapsed}s] DICROTIC ✕ Rejected ${Math.round(info.rejectedIbi)}ms (Power: ${energyPct}% of avg)`;
+            logLine.textContent = `[${elapsed}s] DICROTIC ✕ Rejected ${Math.round(info.rejectedIbi)}ms (Median Shield: ${Math.round(info.expectedPeriod)}ms)`;
             ui.ibiLog.appendChild(logLine);
             ui.ibiLog.scrollTop = ui.ibiLog.scrollHeight;
           },
