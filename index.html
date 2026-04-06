@@ -644,8 +644,18 @@
       let fingerDebounceCount = 0; const FINGER_DEBOUNCE_FRAMES = 8;
       let instantPeriod = 0, averagePeriod = 0, recentPeriods = [];
       const MAX_RECENT_PERIODS = 10;
-      let onBeat = null, onFingerChange = null, onPPGSample = null;
+      let onBeat = null, onFingerChange = null, onPPGSample = null, onSqiUpdate = null, onDicroticReject = null;
       let actualFPS = 30; // will be updated from camera settings
+
+      // --- Dicrotic notch rejection state ---
+      let prevAcceptedIbi = 0;
+      let prevAcceptedBeatTime = 0;
+      let dicroticRejectCount = 0;
+
+      // --- SQI (Signal Quality Index) via Perfusion Index ---
+      let lastSqiTime = 0, currentSqi = 0;
+      const SQI_INTERVAL_MS = 1000;
+      const SQI_WINDOW_S = 2;
 
       // --- Frame timing diagnostics (VFR detection) ---
       let lastFrameTime = 0, frameDeltaBuffer = [], frameDropCount = 0, totalFrames = 0;
@@ -693,6 +703,21 @@
         return rM;
       }
 
+      function computeSqi() {
+        const windowSamples = Math.round(actualFPS * SQI_WINDOW_S);
+        if (rawBuffer.length < windowSamples) return 0;
+        const slice = rawBuffer.slice(-windowSamples);
+        let min = slice[0], max = slice[0], sum = 0;
+        for (let i = 0; i < slice.length; i++) {
+          if (slice[i] < min) min = slice[i];
+          if (slice[i] > max) max = slice[i];
+          sum += slice[i];
+        }
+        const mean = sum / slice.length;
+        if (mean < 0.001) return 0;
+        return (max - min) / mean;
+      }
+
       function processFrame() {
         if (!running) return;
         const now = Date.now(), rawValue = extractRedMean(), filtered = bandpass(rawValue);
@@ -714,28 +739,72 @@
         if (rawBuffer.length > BUFFER_SIZE) { rawBuffer.shift(); timeBuffer.shift(); filteredBuffer.shift(); }
         if (onPPGSample) onPPGSample(filtered);
 
-        // WABP onset detection (replaces old 3-sample peak detection)
+        // Recompute SQI every SQI_INTERVAL_MS
+        if (fingerPresent && (now - lastSqiTime > SQI_INTERVAL_MS)) {
+          currentSqi = computeSqi();
+          lastSqiTime = now;
+          if (onSqiUpdate) onSqiUpdate(currentSqi);
+        }
+
+        // WABP onset detection with dicrotic notch rejection
         if (fingerPresent && (now - startTime > 2000)) {
           const result = WabpDetector.processSample(filtered);
           if (result.detected) {
-            const beatTime = now - (1000 / actualFPS); // onset was ~1 frame ago
+            const beatTime = now - (1000 / actualFPS);
             const interval = beatTime - lastBeatTime;
-            lastBeatTime = beatTime;
-            // Guard: WABP eye-closing is 250ms (tuned for clean 125Hz ABP).
-            // Camera PPG at 30-120fps can resolve dicrotic notch reflections
-            // that appear 300-400ms after onset, outside the eye-closing window.
-            // Enforce a 400ms minimum IBI (= 150 BPM ceiling, physiologically safe)
-            // to reject these. This is equivalent to the old REFRACTORY_MS = 500
-            // but tighter to avoid clipping fast resting HRs.
             const MIN_IBI_MS = 400;
             if (interval > MIN_IBI_MS && interval < (60000 / MIN_BPM)) {
-              instantPeriod = interval / 1000;
-              const instantBPM = 60 / instantPeriod;
-              recentPeriods.push(instantPeriod);
-              if (recentPeriods.length > MAX_RECENT_PERIODS) recentPeriods.shift();
-              averagePeriod = recentPeriods.reduce((a, b) => a + b, 0) / recentPeriods.length;
-              const averageBPM = 60 / averagePeriod;
-              if (onBeat) onBeat({ instantBPM, averageBPM, instantPeriod, averagePeriod, time: beatTime });
+
+              // --- Dicrotic notch rejection ---
+              const DICROTIC_SHORT_RATIO = 0.75;
+              const DICROTIC_SUM_TOLERANCE = 0.15;
+              const DICROTIC_MIN_PERIODS = 4;
+
+              let isDicrotic = false;
+              if (recentPeriods.length >= DICROTIC_MIN_PERIODS && prevAcceptedIbi > 0) {
+                const avgMs = averagePeriod * 1000;
+                const isShort = interval < avgMs * DICROTIC_SHORT_RATIO;
+                if (isShort) {
+                  const pairSum = interval + prevAcceptedIbi;
+                  const sumDeviation = Math.abs(pairSum - avgMs) / avgMs;
+                  if (sumDeviation < DICROTIC_SUM_TOLERANCE) {
+                    isDicrotic = true;
+                  }
+                }
+              }
+
+              if (isDicrotic) {
+                lastBeatTime = prevAcceptedBeatTime;
+                if (recentPeriods.length > 0) {
+                  recentPeriods.pop();
+                  if (recentPeriods.length > 0) {
+                    averagePeriod = recentPeriods.reduce((a, b) => a + b, 0) / recentPeriods.length;
+                  }
+                }
+                dicroticRejectCount++;
+                if (onDicroticReject) onDicroticReject({
+                  time: beatTime,
+                  rejectedIbi: interval,
+                  prevIbi: prevAcceptedIbi,
+                  pairSum: interval + prevAcceptedIbi,
+                  expectedPeriod: averagePeriod * 1000
+                });
+              } else {
+                // Accept the beat
+                prevAcceptedBeatTime = lastBeatTime;
+                prevAcceptedIbi = interval;
+                lastBeatTime = beatTime;
+                instantPeriod = interval / 1000;
+                const instantBPM = 60 / instantPeriod;
+                recentPeriods.push(instantPeriod);
+                if (recentPeriods.length > MAX_RECENT_PERIODS) recentPeriods.shift();
+                averagePeriod = recentPeriods.reduce((a, b) => a + b, 0) / recentPeriods.length;
+                const averageBPM = 60 / averagePeriod;
+                if (onBeat) onBeat({ instantBPM, averageBPM, instantPeriod, averagePeriod, time: beatTime });
+              }
+            } else {
+              // Outside plausible range — bootstrap lastBeatTime for first-beat
+              lastBeatTime = beatTime;
             }
           }
         }
@@ -812,12 +881,17 @@
       }
 
       return {
-        async start({ video, canvas, onBeatCb, onFingerChangeCb, onPPGSampleCb }) {
+        async start({ video, canvas, onBeatCb, onFingerChangeCb, onPPGSampleCb, onSqiUpdateCb, onDicroticRejectCb }) {
           videoEl = video; canvasEl = canvas; ctx = canvas.getContext("2d");
           canvasEl.width = IMAGE_SIZE; canvasEl.height = IMAGE_SIZE;
           onBeat = onBeatCb; onFingerChange = onFingerChangeCb; onPPGSample = onPPGSampleCb || null;
+          onSqiUpdate = onSqiUpdateCb || null; onDicroticReject = onDicroticRejectCb || null;
           rawBuffer = []; timeBuffer = []; filteredBuffer = []; recentPeriods = [];
           lastBeatTime = 0; fingerPresent = false; fingerDebounceCount = 0;
+          // Reset dicrotic state
+          prevAcceptedIbi = 0; prevAcceptedBeatTime = 0; dicroticRejectCount = 0;
+          // Reset SQI state
+          lastSqiTime = 0; currentSqi = 0;
           // Reset diagnostics
           lastFrameTime = 0; frameDeltaBuffer = []; frameDropCount = 0; totalFrames = 0;
           clipHighCount = 0; clipLowCount = 0; lastBrightness = 0;
@@ -827,11 +901,14 @@
           WabpDetector.reset(actualFPS);
           startTime = Date.now(); running = true; processFrame();
         },
-        setCallbacks({ onBeatCb, onFingerChangeCb, onPPGSampleCb }) {
+        setCallbacks({ onBeatCb, onFingerChangeCb, onPPGSampleCb, onSqiUpdateCb, onDicroticRejectCb }) {
           onBeat = onBeatCb || null; onFingerChange = onFingerChangeCb || null; onPPGSample = onPPGSampleCb || null;
+          onSqiUpdate = onSqiUpdateCb || null; onDicroticReject = onDicroticRejectCb || null;
         },
         async stop() { running = false; if (animFrameId) cancelAnimationFrame(animFrameId); await stopCamera(); },
         getActualFPS() { return actualFPS; },
+        getSqi() { return currentSqi; },
+        getDicroticRejectCount() { return dicroticRejectCount; },
         /** Return frame timing and clipping diagnostics for session QC */
         getDiagnostics() {
           const deltas = frameDeltaBuffer;
@@ -971,6 +1048,18 @@
       let currentTrialIndex = -NUM_PRACTICES, currentKnobValue = 0, trialRunning = false, trialDetectorRunning = false;
       let trialIP = [], trialAP = [], trialKS = [], trialCD = [], trialIE = [], trialRecordedHR = [], trialInstantBpms = [];
       let trialToneTimings = [], trialFingerLossEvents = [], trialInitialKnob = 0;
+
+      // --- IBI Plausibility (silent per-trial logging for R pipeline) ---
+      const IBI_CHANGE_THRESHOLD = 0.30;
+      let trialLastIbi = 0, trialCleanBeats = 0, trialFlaggedBeats = 0;
+      let trialIbiFlags = [];
+
+      // --- SQI time series (silent per-trial logging) ---
+      const SQI_GOOD = 0.008, SQI_WARN = 0.003;
+      let trialSqiTimeSeries = [], trialSqiBadSeconds = 0, trialLastSqiCheckTime = 0;
+
+      // --- Dicrotic rejection log (silent per-trial logging) ---
+      let trialDicroticRejections = [];
       let currentInstantPeriod = 0, currentAveragePeriod = 0, baselineStartTime = 0, baselineTimer = null, baselineBPMs = [], waveBuffer = [];
       const screens = {}, WAVE_MAX = 180;
       let dialEl, dialAngle = 0, dialDragging = false, dialCx = 0, dialCy = 0, lastAngle = 0;
@@ -1016,6 +1105,30 @@
           i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
         }
         ctx.stroke();
+      }
+
+      // Silent IBI plausibility check — no UI, writes to per-trial arrays for JSON export
+      function processIbi(beat) {
+        const ibiMs = beat.instantPeriod * 1000;
+        let flag = null;
+        if (trialLastIbi > 0) {
+          const changeFrac = Math.abs(ibiMs - trialLastIbi) / trialLastIbi;
+          if (changeFrac > IBI_CHANGE_THRESHOLD) {
+            flag = {
+              type: 'successive_diff',
+              magnitude: Math.round(changeFrac * 1000) / 10,
+              prevIbi: Math.round(trialLastIbi),
+              currentIbi: Math.round(ibiMs)
+            };
+            trialFlaggedBeats++;
+          } else {
+            trialCleanBeats++;
+          }
+        } else {
+          trialCleanBeats++;
+        }
+        trialLastIbi = ibiMs;
+        trialIbiFlags.push({ time: beat.time, ibiMs: Math.round(ibiMs * 10) / 10, flag });
       }
 
       const MIN_BASELINE_BEATS = 80;
@@ -1079,7 +1192,7 @@
             // DON'T stop the detector — preserve WABP calibrated thresholds and
             // camera stream for the trial phase. Just null out the callbacks so
             // beats aren't processed during the instruction screens.
-            BeatDetector.setCallbacks({ onBeatCb: null, onFingerChangeCb: null, onPPGSampleCb: null });
+            BeatDetector.setCallbacks({ onBeatCb: null, onFingerChangeCb: null, onPPGSampleCb: null, onSqiUpdateCb: null, onDicroticRejectCb: null });
             trialDetectorRunning = true; // so startTrial() uses setCallbacks instead of restart
             if (baselineBPMs.length < MIN_BASELINE_BEATS) {
               // Baseline failed — DO stop and restart from scratch
@@ -1099,6 +1212,10 @@
         show("screen-trial");
         trialIP = []; trialAP = []; trialKS = []; trialCD = []; trialIE = []; trialRecordedHR = []; trialInstantBpms = [];
         trialToneTimings = []; trialFingerLossEvents = [];
+        // Reset per-trial quality logging
+        trialLastIbi = 0; trialCleanBeats = 0; trialFlaggedBeats = 0; trialIbiFlags = [];
+        trialSqiTimeSeries = []; trialSqiBadSeconds = 0; trialLastSqiCheckTime = 0;
+        trialDicroticRejections = [];
         currentInstantPeriod = 0; currentAveragePeriod = 0;
         currentKnobValue = (Math.random() * 2 - 1) * KNOB_VALUE_RANGE;
         trialInitialKnob = currentKnobValue;
@@ -1117,6 +1234,9 @@
           trialKS.push(currentKnobValue); trialIE.push(prev - currentInstantPeriod);
           const delay = (currentAveragePeriod / 2) * currentKnobValue;
           trialCD.push(delay); trialRecordedHR.push(beat.instantBPM); trialInstantBpms.push(beat.averageBPM);
+          
+          // Silent IBI plausibility logging
+          processIbi(beat);
           
           document.getElementById("trial-bpm").textContent = Math.round(beat.averageBPM);
           const dNow = delay < 0 ? currentInstantPeriod + delay : delay;
@@ -1148,21 +1268,53 @@
           }
         };
 
+        // Silent SQI logging callback
+        const sqiCb = (sqi) => {
+          const now = Date.now();
+          if (trialLastSqiCheckTime > 0 && sqi < SQI_WARN) {
+            trialSqiBadSeconds += (now - trialLastSqiCheckTime) / 1000;
+          }
+          trialLastSqiCheckTime = now;
+          trialSqiTimeSeries.push({ time: now, sqi: Math.round(sqi * 100000) / 100000 });
+        };
+
+        // Silent dicrotic rejection logging callback
+        const dicroticCb = (info) => {
+          trialDicroticRejections.push(info);
+        };
+
         if (!trialDetectorRunning) {
-          await BeatDetector.start({ video: document.getElementById("video-feed"), canvas: document.getElementById("sampling-canvas"), onBeatCb: beatCb, onFingerChangeCb: fCb });
+          await BeatDetector.start({ video: document.getElementById("video-feed"), canvas: document.getElementById("sampling-canvas"), onBeatCb: beatCb, onFingerChangeCb: fCb, onSqiUpdateCb: sqiCb, onDicroticRejectCb: dicroticCb });
           trialDetectorRunning = true;
-        } else { BeatDetector.setCallbacks({ onBeatCb: beatCb, onFingerChangeCb: fCb }); }
+        } else { BeatDetector.setCallbacks({ onBeatCb: beatCb, onFingerChangeCb: fCb, onSqiUpdateCb: sqiCb, onDicroticRejectCb: dicroticCb }); }
       }
 
       function confirmTrial() {
         trialRunning = false; MotionDetector.stop();
-        BeatDetector.setCallbacks({ onBeatCb: null, onFingerChangeCb: null });
+        BeatDetector.setCallbacks({ onBeatCb: null, onFingerChangeCb: null, onSqiUpdateCb: null, onDicroticRejectCb: null });
         show("screen-confidence");
         const sl = document.getElementById("confidence-slider"), vd = document.getElementById("confidence-value"), btn = document.getElementById("confirm-confidence-btn");
         sl.value = 5; vd.textContent = 5; btn.disabled = true;
         sl.oninput = () => { vd.textContent = sl.value; btn.disabled = false; };
         btn.onclick = () => {
-          const td = { type: "trial", isPractice: currentTrialIndex < 0, initialKnobValue: trialInitialKnob, instantPeriods: [...trialIP], averagePeriods: [...trialAP], knobScales: [...trialKS], currentDelays: [...trialCD], instantErrs: [...trialIE], recordedHR: [...trialRecordedHR], instantBpms: [...trialInstantBpms], toneTimings: [...trialToneTimings], fingerLossEvents: [...trialFingerLossEvents], confidence: parseInt(sl.value), bodyPos: -1, ppgDiagnostics: BeatDetector.getDiagnostics() };
+          const totalBeats = trialCleanBeats + trialFlaggedBeats;
+          const td = { type: "trial", isPractice: currentTrialIndex < 0, initialKnobValue: trialInitialKnob, instantPeriods: [...trialIP], averagePeriods: [...trialAP], knobScales: [...trialKS], currentDelays: [...trialCD], instantErrs: [...trialIE], recordedHR: [...trialRecordedHR], instantBpms: [...trialInstantBpms], toneTimings: [...trialToneTimings], fingerLossEvents: [...trialFingerLossEvents], confidence: parseInt(sl.value), bodyPos: -1, ppgDiagnostics: BeatDetector.getDiagnostics(),
+            ibiFlags: [...trialIbiFlags],
+            sqiTimeSeries: [...trialSqiTimeSeries],
+            dicroticRejections: [...trialDicroticRejections],
+            qualitySummary: {
+              totalBeats,
+              cleanBeats: trialCleanBeats,
+              flaggedBeats: trialFlaggedBeats,
+              flagRate: totalBeats > 0 ? Math.round(trialFlaggedBeats / totalBeats * 10000) / 100 : 0,
+              dicroticRejectsCount: trialDicroticRejections.length,
+              sqiBadSeconds: Math.round(trialSqiBadSeconds * 10) / 10,
+              sqiFinalValue: Math.round(BeatDetector.getSqi() * 100000) / 100000,
+              ibiChangeThreshold: IBI_CHANGE_THRESHOLD,
+              sqiGoodThreshold: SQI_GOOD,
+              sqiWarnThreshold: SQI_WARN
+            }
+          };
           if (currentTrialIndex >= 0 && (currentTrialIndex + 1) % BODY_MAP_EVERY === 0) {
             show("screen-bodymap");
             const parts = document.querySelectorAll(".body-part"), nb = document.getElementById("nowhere-btn"), cb = document.getElementById("confirm-bodymap-btn"), lb = document.getElementById("bodymap-selected");

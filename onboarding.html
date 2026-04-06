@@ -628,6 +628,8 @@
       let lastBeatTime = 0, startTime = 0, fingerPresent = false, fingerDebounce = 0;
       let recentPeriods = [], onBeat = null, onFingerChange = null, onPPGSample = null;
       let actualFPS = 30;
+      // --- Dicrotic notch rejection state ---
+      let prevAcceptedIbi = 0, prevAcceptedBeatTime = 0, dicroticRejectCount = 0;
       let hpState = { x1: 0, y1: 0 }, lpState = { y1: 0 };
       let HP_A, LP_A;
 
@@ -663,12 +665,43 @@
           const result = OnboardingWabp.processSample(filt);
           if (result.detected) {
             const beatTime = now - (1000/actualFPS), interval = beatTime - lastBeatTime;
-            lastBeatTime = beatTime;
             if (interval > 400 && interval < 1500) {
-              const ip = interval / 1000;
-              recentPeriods.push(ip); if (recentPeriods.length > 10) recentPeriods.shift();
-              const ap = recentPeriods.reduce((a,b) => a+b, 0) / recentPeriods.length;
-              if (onBeat) onBeat({ instantBPM: 60/ip, averageBPM: 60/ap, instantPeriod: ip, averagePeriod: ap, time: beatTime });
+
+              // --- Dicrotic notch rejection ---
+              const DICROTIC_SHORT_RATIO = 0.75;
+              const DICROTIC_SUM_TOLERANCE = 0.15;
+              const DICROTIC_MIN_PERIODS = 4;
+              const ap = recentPeriods.length > 0 ? recentPeriods.reduce((a,b) => a+b, 0) / recentPeriods.length : 0;
+
+              let isDicrotic = false;
+              if (recentPeriods.length >= DICROTIC_MIN_PERIODS && prevAcceptedIbi > 0) {
+                const avgMs = ap * 1000;
+                if (interval < avgMs * DICROTIC_SHORT_RATIO) {
+                  const pairSum = interval + prevAcceptedIbi;
+                  if (Math.abs(pairSum - avgMs) / avgMs < DICROTIC_SUM_TOLERANCE) {
+                    isDicrotic = true;
+                  }
+                }
+              }
+
+              if (isDicrotic) {
+                lastBeatTime = prevAcceptedBeatTime;
+                if (recentPeriods.length > 0) {
+                  recentPeriods.pop();
+                }
+                dicroticRejectCount++;
+              } else {
+                prevAcceptedBeatTime = lastBeatTime;
+                prevAcceptedIbi = interval;
+                lastBeatTime = beatTime;
+                const ip = interval / 1000;
+                recentPeriods.push(ip); if (recentPeriods.length > 10) recentPeriods.shift();
+                const apNew = recentPeriods.reduce((a,b) => a+b, 0) / recentPeriods.length;
+                if (onBeat) onBeat({ instantBPM: 60/ip, averageBPM: 60/apNew, instantPeriod: ip, averagePeriod: apNew, time: beatTime });
+              }
+            } else {
+              // Outside plausible range — bootstrap lastBeatTime
+              lastBeatTime = beatTime;
             }
           }
         }
@@ -683,6 +716,7 @@
           onBeat = onBeatCb; onFingerChange = onFingerChangeCb; onPPGSample = onPPGSampleCb || null;
           rawBuf = []; timeBuf = []; filteredBuf = []; recentPeriods = [];
           lastBeatTime = 0; fingerPresent = false; fingerDebounce = 0;
+          prevAcceptedIbi = 0; prevAcceptedBeatTime = 0; dicroticRejectCount = 0;
           hpState = { x1: 0, y1: 0 }; lpState = { y1: 0 };
           if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
           // Start camera with high framerate request

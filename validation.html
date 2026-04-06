@@ -159,6 +159,49 @@
     .ibi-log .clean { color: var(--accent-green); }
     .ibi-log .bad { color: var(--accent-red); }
 
+    /* PAT Knob Panel */
+    .knob-panel {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px;
+      display: none; flex-direction: column; align-items: center; gap: 12px;
+    }
+    .knob-panel .panel-title {
+      font-size: 0.8rem; font-weight: 600; color: var(--fg-muted);
+      text-transform: uppercase; letter-spacing: 0.05em; width: 100%;
+    }
+    .knob-dial-wrapper {
+      position: relative; width: 180px; height: 180px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 50%; background: var(--bg); border: 1px solid var(--border);
+    }
+    .knob-dial-ticks { position: absolute; inset: 0; pointer-events: none; border-radius: 50%; z-index: 1; }
+    .knob-tick {
+      position: absolute; width: 2px; height: 5px;
+      background: var(--border); top: 6px; left: 50%;
+      transform-origin: 50% 84px; margin-left: -1px;
+    }
+    .knob-dial {
+      width: 100px; height: 100px; border-radius: 50%;
+      background: var(--bg-card); border: 2px solid var(--border);
+      position: relative; touch-action: none; cursor: grab; z-index: 2;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .knob-dial:active { cursor: grabbing; }
+    .knob-dial-indicator {
+      position: absolute; top: 6px; left: 50%;
+      width: 3px; height: 14px; background: var(--accent-blue);
+      border-radius: 2px; transform: translateX(-50%);
+    }
+    .knob-labels {
+      display: flex; justify-content: space-between; width: 100%;
+      font-size: 0.75rem; font-weight: 600; color: var(--fg-muted);
+      text-transform: uppercase; letter-spacing: 0.03em;
+    }
+    .knob-value-display {
+      font-family: var(--font-mono); font-size: 1.1rem; font-weight: 600;
+      color: var(--accent-blue);
+    }
+
     /* Hidden Elements */
     #video-feed, #sampling-canvas { position: fixed; top: -9999px; left: -9999px; width: 40px; height: 40px; opacity: 0; pointer-events: none; }
   </style>
@@ -285,6 +328,28 @@
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
         Pulse Beep: OFF
       </button>
+
+      <!-- PAT Knob Mode -->
+      <button class="btn btn-pulse-beep" id="btn-knob-toggle" style="background: var(--border); color: var(--fg-muted);">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8"/></svg>
+        PAT Knob: OFF
+      </button>
+
+      <div class="knob-panel" id="knob-panel">
+        <div class="panel-title">Phase Adjustment Knob</div>
+        <div class="knob-dial-wrapper">
+          <div class="knob-dial-ticks" id="knob-dial-ticks"></div>
+          <div class="knob-dial" id="knob-dial">
+            <div class="knob-dial-indicator"></div>
+          </div>
+        </div>
+        <div class="knob-labels">
+          <span>◀ Earlier</span>
+          <span>Later ▶</span>
+        </div>
+        <div class="knob-value-display" id="knob-value-display">Knob: 0.000</div>
+      </div>
+
       <button class="btn btn-stop" id="btn-stop">Stop & Export Data</button>
     </div>
 
@@ -706,6 +771,13 @@
       let sessionStartTime = 0;
       let pulseBeepEnabled = false;
 
+      // --- PAT Knob Mode State ---
+      const KNOB_VALUE_RANGE = 1.0;
+      let knobEnabled = false, knobValue = 0, knobAngle = 0;
+      let knobDragging = false, knobCx = 0, knobCy = 0, knobLastAngle = 0;
+      let knobToneTimings = []; // logged to export
+      let currentAveragePeriodForKnob = 0, currentInstantPeriodForKnob = 0;
+
       // --- IBI Plausibility State ---
       const IBI_CHANGE_THRESHOLD = 0.30; // 30% successive difference = flag
       let lastIbi = 0; // ms
@@ -735,6 +807,7 @@
         syncMarkers: [],
         toneTimestamps: [],
         pulseBeepTimestamps: [],
+        knobToneTimings: [],
         ibiFlags: [],
         sqiTimeSeries: [],
         dicroticRejections: [],
@@ -772,6 +845,11 @@
         statDicrotic: document.getElementById('stat-dicrotic'),
         statSqiBad: document.getElementById('stat-sqi-bad'),
         ibiLog: document.getElementById('ibi-log'),
+        // Knob panel
+        knobToggle: document.getElementById('btn-knob-toggle'),
+        knobPanel: document.getElementById('knob-panel'),
+        knobDial: document.getElementById('knob-dial'),
+        knobValueDisplay: document.getElementById('knob-value-display'),
       };
 
       function drawWaveform() {
@@ -953,6 +1031,15 @@
         lastIbi = 0; cleanBeatCount = 0; flaggedBeatCount = 0; ibiFlags = [];
         currentSqiValue = 0; sqiBadSeconds = 0; lastSqiCheckTime = 0; sqiTimeSeries = [];
         dicroticRejections = [];
+        // Reset knob state
+        knobToneTimings = []; knobEnabled = false; knobValue = 0; knobAngle = 0;
+        currentAveragePeriodForKnob = 0; currentInstantPeriodForKnob = 0;
+        ui.knobToggle.classList.remove('active');
+        ui.knobToggle.style.background = 'var(--border)'; ui.knobToggle.style.color = 'var(--fg-muted)';
+        ui.knobToggle.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8"/></svg> PAT Knob: OFF';
+        ui.knobPanel.style.display = 'none';
+        if (ui.knobDial) ui.knobDial.style.transform = 'rotate(0rad)';
+        ui.knobValueDisplay.textContent = 'Knob: 0.000';
         ui.ibiLog.innerHTML = '';
         ui.sqiValue.textContent = '--'; ui.sqiValue.style.color = 'var(--border)';
         ui.sqiBar.style.width = '0%';
@@ -1007,15 +1094,38 @@
             ui.beats.textContent = validationData.beatTimestamps.length;
             ui.bpm.textContent = Math.round(beat.averageBPM);
             
+            // Track periods for knob delay computation
+            currentAveragePeriodForKnob = beat.averagePeriod;
+            currentInstantPeriodForKnob = beat.instantPeriod;
+            
             // IBI plausibility check
             processIbi(beat);
             
-            // Pulse beep: fire tone on each detected beat
-            if (pulseBeepEnabled) {
+            // Pulse beep: fire tone on each detected beat (immediate)
+            if (pulseBeepEnabled && !knobEnabled) {
               const beepTime = performance.now();
               AudioEngine.resume();
               AudioEngine.play();
               validationData.pulseBeepTimestamps.push(beepTime);
+            }
+            
+            // PAT Knob mode: schedule tone at delay = (averagePeriod / 2) * knobValue
+            if (knobEnabled) {
+              const delay = (currentAveragePeriodForKnob / 2) * knobValue;
+              const dNow = delay < 0 ? currentInstantPeriodForKnob + delay : delay;
+              if (dNow > 0 && dNow < 3) {
+                AudioEngine.resume();
+                // Use setTimeout since validation AudioEngine doesn't have scheduleAt
+                const scheduleTime = performance.now();
+                setTimeout(() => { AudioEngine.play(); }, dNow * 1000);
+                knobToneTimings.push({
+                  beatTime: beat.time,
+                  knobValue: knobValue,
+                  intendedDelay: dNow,
+                  scheduledAt: scheduleTime,
+                  averagePeriod: currentAveragePeriodForKnob,
+                });
+              }
             }
             
             ui.fingerDot.style.transform = 'scale(1.5)';
@@ -1077,6 +1187,7 @@
         validationData.ibiFlags = ibiFlags;
         validationData.sqiTimeSeries = sqiTimeSeries;
         validationData.dicroticRejections = dicroticRejections;
+        validationData.knobToneTimings = knobToneTimings;
         validationData.qualitySummary = {
           totalBeats: total,
           cleanBeats: cleanBeatCount,
@@ -1120,6 +1231,64 @@
           }
           ui.pulseBeep.addEventListener('touchstart', (e) => { e.preventDefault(); togglePulseBeep(); });
           ui.pulseBeep.addEventListener('click', togglePulseBeep);
+
+          // --- PAT Knob toggle ---
+          function toggleKnob() {
+            knobEnabled = !knobEnabled;
+            const label = knobEnabled ? 'ON' : 'OFF';
+            ui.knobToggle.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8"/></svg> PAT Knob: ${label}`;
+            if (knobEnabled) {
+              ui.knobToggle.style.background = 'var(--accent-blue)'; ui.knobToggle.style.color = '#fff';
+              ui.knobPanel.style.display = 'flex';
+              // Disable pulse beep — mutually exclusive
+              pulseBeepEnabled = false;
+              ui.pulseBeep.classList.remove('active');
+              ui.pulseBeep.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> Pulse Beep: OFF';
+            } else {
+              ui.knobToggle.style.background = 'var(--border)'; ui.knobToggle.style.color = 'var(--fg-muted)';
+              ui.knobPanel.style.display = 'none';
+            }
+          }
+          ui.knobToggle.addEventListener('touchstart', (e) => { e.preventDefault(); toggleKnob(); });
+          ui.knobToggle.addEventListener('click', toggleKnob);
+
+          // --- Dial ticks ---
+          const tickContainer = document.getElementById('knob-dial-ticks');
+          if (tickContainer) {
+            for (let i = 0; i < 48; i++) {
+              const tick = document.createElement('div');
+              tick.className = 'knob-tick';
+              tick.style.transform = `rotate(${i * 7.5}deg)`;
+              if (i % 12 === 0) { tick.style.height = '10px'; tick.style.background = 'var(--fg-muted)'; }
+              tickContainer.appendChild(tick);
+            }
+          }
+
+          // --- Dial pointer interaction ---
+          const dialEl = ui.knobDial;
+          if (dialEl) {
+            dialEl.addEventListener('pointerdown', (e) => {
+              e.preventDefault(); knobDragging = true;
+              const rect = dialEl.getBoundingClientRect();
+              knobCx = rect.left + rect.width / 2; knobCy = rect.top + rect.height / 2;
+              knobLastAngle = Math.atan2(e.clientY - knobCy, e.clientX - knobCx);
+              dialEl.setPointerCapture(e.pointerId);
+            }, { passive: false });
+
+            window.addEventListener('pointermove', (e) => {
+              if (!knobDragging) return; e.preventDefault();
+              const a = Math.atan2(e.clientY - knobCy, e.clientX - knobCx);
+              let d = a - knobLastAngle;
+              if (d > Math.PI) d -= 2 * Math.PI; if (d < -Math.PI) d += 2 * Math.PI;
+              knobAngle = Math.max(-Math.PI, Math.min(Math.PI, knobAngle + d));
+              knobLastAngle = a;
+              knobValue = ((knobAngle + Math.PI) / (2 * Math.PI) * 2 - 1) * KNOB_VALUE_RANGE;
+              dialEl.style.transform = `rotate(${knobAngle}rad)`;
+              ui.knobValueDisplay.textContent = `Knob: ${knobValue.toFixed(3)}`;
+            }, { passive: false });
+
+            window.addEventListener('pointerup', () => { knobDragging = false; });
+          }
         }
       };
     })();
