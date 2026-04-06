@@ -829,10 +829,17 @@
         const cameras = devices.filter((d) => d.kind === "videoinput");
         let torchWorking = false;
 
+        // Rank cameras: want standard wide back camera, skip ultra-wide/telephoto/virtual composites
+        const ranked = [];
         for (const cam of cameras) {
           const label = (cam.label || "").toLowerCase();
           if (label.includes("front") || label.includes("facetime")) continue;
           if (label.includes("dual") || label.includes("triple")) continue;
+          if (label.includes("ultra")) continue;
+          if (label.includes("tele")) continue;
+          if (label.includes("back") || label === "") { ranked.unshift(cam); } else { ranked.push(cam); }
+        }
+        for (const cam of ranked) {
           try {
             if (stream) stream.getTracks().forEach((t) => t.stop());
             stream = await navigator.mediaDevices.getUserMedia({
@@ -845,7 +852,9 @@
             const track = stream.getVideoTracks()[0];
             try {
               await track.applyConstraints({ advanced: [{ torch: true }] });
-              torchWorking = true; break;
+              torchWorking = true;
+              console.log(`[BeatDetector] Selected: "${cam.label}"`);
+              break;
             } catch (err) { /* torch failed, try next */ }
           } catch (err) { /* camera failed, try next */ }
         }
