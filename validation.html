@@ -384,15 +384,31 @@
         for (let i = 0; i < len; i++) { const t = i / sr; d[i] = Math.sin(2 * Math.PI * freq * t) * Math.min(1, t * 50) * Math.min(1, (dur - t) * 50) * 0.5; }
         return buf;
       }
+      // Physiological floor: 350 ms ≈ 171 bpm.
+      const MIN_TONE_SPACING_MS = 350;
+      let lastPlayedPerfNow = 0;
+      let dropLog = [];
       return {
         init() { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); lowBuf = createBeep(440, 0.08); },
-        play() { 
-          if (audioCtx) { 
-            const s = audioCtx.createBufferSource(); s.buffer = lowBuf; s.connect(audioCtx.destination); 
-            s.start(); 
-          } 
+        play() {
+          if (!audioCtx) return null;
+          if (audioCtx.state === "suspended" || audioCtx.state === "interrupted") audioCtx.resume();
+          const now = performance.now();
+          const sinceLast = now - lastPlayedPerfNow;
+          if (sinceLast < MIN_TONE_SPACING_MS) {
+            dropLog.push({ perfNow: now, sinceLastMs: Math.round(sinceLast), ctxState: audioCtx.state });
+            return { dropped: true, sinceLastMs: sinceLast };
+          }
+          const s = audioCtx.createBufferSource(); s.buffer = lowBuf; s.connect(audioCtx.destination);
+          s.start();
+          lastPlayedPerfNow = now;
+          return { perfNow: now, ctxState: audioCtx.state };
         },
-        resume() { if (audioCtx?.state === "suspended") audioCtx.resume(); }
+        resetSchedulerState() { lastPlayedPerfNow = 0; },
+        getDropLog() { return dropLog.slice(); },
+        clearDropLog() { dropLog = []; },
+        resume() { if (audioCtx && (audioCtx.state === "suspended" || audioCtx.state === "interrupted")) audioCtx.resume(); },
+        getState() { return audioCtx ? audioCtx.state : "uninitialized"; }
       };
     })();
 

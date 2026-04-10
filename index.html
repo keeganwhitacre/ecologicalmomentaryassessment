@@ -1006,18 +1006,44 @@
         for (let i = 0; i < len; i++) { const t = i / sr; d[i] = Math.sin(2 * Math.PI * freq * t) * Math.min(1, t * 50) * Math.min(1, (dur - t) * 50) * 0.5; }
         return buf;
       }
+      // Physiological floor: 350 ms ≈ 171 bpm. Tones closer than this cannot
+      // reflect distinct cardiac cycles and are suppressed.
+      const MIN_TONE_SPACING = 0.35;
+      let lastScheduledWhen = 0;
+      let dropLog = []; // {perfNow, requestedWhen, sinceLastMs, ctxState}
       return {
-        init() { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); lowBuf = createBeep(440, 0.08); },
+        init() {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          lowBuf = createBeep(440, 0.08);
+        },
         scheduleAt(delaySec) {
           if (!audioCtx) return null;
+          // Defensive resume: iOS suspends aggressively on backgrounding/notifications.
+          if (audioCtx.state === "suspended" || audioCtx.state === "interrupted") {
+            audioCtx.resume();
+          }
+          const when = audioCtx.currentTime + Math.max(0, delaySec);
+          const sinceLast = (when - lastScheduledWhen) * 1000;
+          if (when - lastScheduledWhen < MIN_TONE_SPACING) {
+            dropLog.push({ perfNow: performance.now(), requestedWhen: when, sinceLastMs: Math.round(sinceLast), ctxState: audioCtx.state });
+            return { dropped: true, sinceLastMs: sinceLast };
+          }
           const s = audioCtx.createBufferSource();
           s.buffer = lowBuf; s.connect(audioCtx.destination);
-          const when = audioCtx.currentTime + Math.max(0, delaySec);
           s.start(when);
-          return { scheduledAt: when, perfNow: performance.now(), delaySec };
+          lastScheduledWhen = when;
+          return { scheduledAt: when, perfNow: performance.now(), delaySec, ctxState: audioCtx.state };
         },
-        playLow() { if (audioCtx) { const s = audioCtx.createBufferSource(); s.buffer = lowBuf; s.connect(audioCtx.destination); s.start(); } },
-        resume() { if (audioCtx?.state === "suspended") audioCtx.resume(); },
+        resetSchedulerState() { lastScheduledWhen = 0; },
+        getDropLog() { return dropLog.slice(); },
+        clearDropLog() { dropLog = []; },
+        playLow() {
+          if (!audioCtx) return;
+          if (audioCtx.state === "suspended" || audioCtx.state === "interrupted") audioCtx.resume();
+          const s = audioCtx.createBufferSource(); s.buffer = lowBuf; s.connect(audioCtx.destination); s.start();
+        },
+        resume() { if (audioCtx && (audioCtx.state === "suspended" || audioCtx.state === "interrupted")) audioCtx.resume(); },
+        getState() { return audioCtx ? audioCtx.state : "uninitialized"; },
         getContext() { return audioCtx; },
       };
     })();
