@@ -159,8 +159,6 @@
     .baseline-bpm-number { font-size: 3.8rem; font-weight: 500; font-family: var(--font-mono); color: var(--fg); line-height: 1; letter-spacing: -0.04em; }
     .baseline-bpm-label { font-size: 0.8rem; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 4px; }
 
-    .baseline-status { font-size: 1rem; color: var(--fg-muted); text-align: center; min-height: 1.5em; transition: color 0.3s; margin-top: 24px; font-weight: 500; }
-
     /* ---- PAT Trial (Physical Dial) ---- */
     #screen-trial { align-items: center; justify-content: center; }
     .trial-header { text-align: center; position: absolute; top: calc(env(safe-area-inset-top, 24px) + 24px); width: 100%; }
@@ -181,7 +179,7 @@
       margin-left: -1px; transition: background 0.2s;
     }
 
-    /* Physical, tactile knob styling */
+    /* Endless, tactile knob styling */
     .rotary-dial {
       width: 160px; height: 160px; border-radius: 50%;
       background: linear-gradient(145deg, #1f1f23, #121214);
@@ -208,23 +206,6 @@
       text-transform: uppercase; letter-spacing: 0.08em;
     }
 
-    /* Active SQI Camera Warning */
-    .sqi-camera-warning {
-      position: fixed; top: calc(env(safe-area-inset-top, 24px) + 80px);
-      left: 50%; transform: translateX(-50%) scale(0.9);
-      display: flex; flex-direction: column; align-items: center; gap: 8px;
-      opacity: 0; pointer-events: none; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      z-index: 50;
-    }
-    .sqi-camera-warning.visible { opacity: 1; transform: translateX(-50%) scale(1); }
-    
-    .sqi-preview-circle {
-      width: 70px; height: 70px; border-radius: 50%;
-      background: #000; border: 2px solid var(--accent-red);
-      object-fit: cover; box-shadow: 0 0 20px rgba(255, 69, 58, 0.3);
-    }
-    .sqi-warning-text { font-size: 0.9rem; font-weight: 500; color: var(--accent-red); text-transform: uppercase; letter-spacing: 0.05em; }
-
     .movement-warning {
       position: fixed; top: calc(env(safe-area-inset-top, 24px) + 16px);
       left: 50%; transform: translateX(-50%) translateY(-20px);
@@ -236,14 +217,25 @@
     }
     .movement-warning.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-    /* ---- Finger overlay ---- */
-    .finger-overlay {
+    /* ---- Unified Sensor Warning Overlay ---- */
+    .sensor-warning-overlay {
       position: fixed; inset: 0; z-index: 100;
       background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
       opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
     }
-    .finger-overlay.visible { opacity: 1; pointer-events: all; }
+    .sensor-warning-overlay.visible { opacity: 1; pointer-events: all; }
+
+    .sensor-preview-circle {
+      width: 120px; height: 120px; border-radius: 50%;
+      background: #000; border: 3px solid var(--fg);
+      object-fit: cover; box-shadow: none;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+      margin-bottom: 24px;
+    }
+    .sensor-warning-text {
+      text-align: center; font-size: 1.1rem; color: var(--fg); font-weight: 500; line-height: 1.4;
+    }
 
     /* ---- Body map ---- */
     .body-map-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; max-width: 340px; margin: 0 auto; }
@@ -264,6 +256,12 @@
   <video id="video-feed" playsinline muted></video>
   <canvas id="sampling-canvas"></canvas>
 
+  <!-- Unified Sensor Overlay (Replaces Trial/Baseline specific overlays) -->
+  <div class="sensor-warning-overlay" id="sensor-warning-overlay">
+    <canvas id="sensor-preview-circle" class="sensor-preview-circle"></canvas>
+    <div class="sensor-warning-text" id="sensor-warning-text">Place finger on camera</div>
+  </div>
+
   <!-- 1. Participant ID -->
   <div class="screen active" id="screen-participant">
     <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;">
@@ -281,7 +279,7 @@
     <button class="btn btn-primary btn-block" id="start-btn">Begin Session</button>
   </div>
 
-  <!-- 2. Onboarding (Cleaned up) -->
+  <!-- 2. Onboarding -->
   <div class="screen" id="screen-onboarding">
     <div class="ema-item-container" id="onboarding-container">
       <!-- Content injected by JS -->
@@ -291,14 +289,12 @@
     </div>
   </div>
 
-  <!-- 3. EMA (One Thing Layout) -->
+  <!-- 3. EMA -->
   <div class="screen" id="screen-ema">
     <div class="ema-progress" id="ema-progress-text">1 OF 5</div>
-    
     <div class="ema-item-container" id="ema-single-container">
       <!-- Injected by JS -->
     </div>
-    
     <div style="margin-top: 40px;">
       <button class="btn btn-primary btn-block" id="ema-next-btn" disabled>Next</button>
     </div>
@@ -306,14 +302,6 @@
 
   <!-- 4. Baseline -->
   <div class="screen" id="screen-baseline">
-    <div class="finger-overlay" id="baseline-finger-overlay">
-      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--fg)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="5" y="2" width="14" height="20" rx="4" ry="4"/>
-        <circle cx="12" cy="8" r="3" fill="var(--accent-red)" stroke="none"/> 
-      </svg>
-      <p>Place your finger gently over the rear camera and flash.</p>
-    </div>
-
     <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
       <div style="margin-bottom: 40px;">
         <h1>Calibration</h1>
@@ -330,29 +318,13 @@
           <div class="baseline-bpm-label">BPM</div>
         </div>
       </div>
-
-      <p class="baseline-status" id="baseline-status">Awaiting contact...</p>
     </div>
   </div>
 
   <!-- 5. Trial -->
   <div class="screen" id="screen-trial">
-    <div class="finger-overlay" id="trial-finger-overlay">
-      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--fg)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="5" y="2" width="14" height="20" rx="4" ry="4"/>
-        <circle cx="12" cy="8" r="3" fill="var(--accent-red)" stroke="none"/> 
-      </svg>
-      <p>Please return your finger to the camera.</p>
-    </div>
-
     <div class="movement-warning" id="trial-movement-warning">
       Keep still
-    </div>
-
-    <!-- The new visual SQI feedback -->
-    <div class="sqi-camera-warning" id="trial-sqi-camera-warning">
-      <canvas id="trial-camera-preview" class="sqi-preview-circle"></canvas>
-      <span class="sqi-warning-text">Make the circle red</span>
     </div>
 
     <div class="trial-header">
@@ -469,10 +441,8 @@
       };
     })();
 
-    window.addEventListener("beforeunload", () => { /* discard active session */ });
-
     // ============================================================
-    // EMA MODULE (Rewritten for "One Thing" layout)
+    // EMA MODULE
     // ============================================================
     const EMA = (function () {
       const ITEM = {
@@ -528,11 +498,11 @@
           anchors.innerHTML = `<span>${item.leftAnchor}</span><span>${item.rightAnchor}</span>`;
           wrap.append(valEl, input, anchors);
           container.appendChild(wrap);
-          sessionResponses[item.id] = item.defaultVal; // Default capture
-          nextBtn.disabled = false; // Slider always has a value
+          sessionResponses[item.id] = item.defaultVal;
+          nextBtn.disabled = false;
         } 
         else if (item.type === "choice") {
-          nextBtn.disabled = true; // Require selection
+          nextBtn.disabled = true;
           const group = document.createElement("div"); group.className = "bubble-group";
           item.options.forEach(opt => {
             const b = document.createElement("div"); b.className = "bubble"; b.textContent = opt;
@@ -580,7 +550,7 @@
     })();
 
     // ============================================================
-    // ONBOARDING MODULE (One Thing Layout)
+    // ONBOARDING MODULE 
     // ============================================================
     const Onboarding = (function() {
       const STEPS = [
@@ -638,7 +608,7 @@
     // TASK LOGIC & UI
     // ============================================================
     const App = (function () {
-      const NUM_TRIALS = 20, NUM_PRACTICES = 2, BODY_MAP_EVERY = 4, KNOB_VALUE_RANGE = 1.0, BASELINE_DURATION_S = 120;
+      const NUM_TRIALS = 20, NUM_PRACTICES = 2, BODY_MAP_EVERY = 4, BASELINE_DURATION_S = 120;
       let sessionData = null, currentEmaSessionType = null;
       let currentTrialIndex = -NUM_PRACTICES, currentKnobValue = 0, trialRunning = false, trialDetectorRunning = false;
       let trialIP = [], trialAP = [], trialKS = [], trialCD = [], trialIE = [], trialRecordedHR = [], trialInstantBpms = [];
@@ -646,19 +616,24 @@
       
       const IBI_CHANGE_THRESHOLD = 0.30;
       let trialLastIbi = 0, trialCleanBeats = 0, trialFlaggedBeats = 0, trialIbiFlags = [];
-      const SQI_GOOD = 0.008, SQI_WARN = 0.003;
+      const SQI_GOOD = 0.008, SQI_WARN = 0.004;
       let trialSqiTimeSeries = [], trialSqiBadSeconds = 0, trialLastSqiCheckTime = 0, trialDicroticRejections = [];
       
       let currentInstantPeriod = 0, currentAveragePeriod = 0, baselineStartTime = 0, baselineTimer = null, baselineBPMs = [];
       const screens = {};
+      
+      // Endless Dial State
       let dialEl, dialAngle = 0, dialDragging = false, dialCx = 0, dialCy = 0, lastAngle = 0;
+      let trialVisualOffset = 0; 
 
-      // FIX: The core fix for the "black screen" bug.
-      // Removed inline style.opacity = 0 manipulation which was breaking revisits.
+      // Unified Sensor State
+      let isFingerPresent = false;
+      let currentSqiValue = 0;
+      let lastBeatPerfTime = performance.now();
+      let sensorCheckInterval = null;
+
       function show(id) {
-        document.querySelectorAll(".finger-overlay").forEach(el => el.classList.remove("visible"));
         if (screens.active) screens.active.classList.remove("active");
-        
         const targetScreen = document.getElementById(id);
         screens.active = targetScreen;
         if (screens.active) screens.active.classList.add("active");
@@ -673,16 +648,69 @@
           lastAngle = Math.atan2(e.clientY - dialCy, e.clientX - dialCx);
           dialEl.setPointerCapture(e.pointerId);
         }, { passive: false });
+
         window.addEventListener("pointermove", (e) => {
           if (!dialDragging) return; e.preventDefault();
           const a = Math.atan2(e.clientY - dialCy, e.clientX - dialCx);
-          let d = a - lastAngle; if (d > Math.PI) d -= 2 * Math.PI; if (d < -Math.PI) d += 2 * Math.PI;
-          dialAngle = Math.max(-Math.PI, Math.min(Math.PI, dialAngle + d)); lastAngle = a;
-          currentKnobValue = ((dialAngle + Math.PI) / (2 * Math.PI) * 2 - 1) * KNOB_VALUE_RANGE;
+          let d = a - lastAngle; 
+          
+          // Seamless endless rotation (no Math.max clamps)
+          if (d > Math.PI) d -= 2 * Math.PI; 
+          if (d < -Math.PI) d += 2 * Math.PI;
+          
+          dialAngle += d; // Accumulate angle endlessly
+          lastAngle = a;
           dialEl.style.transform = `rotate(${dialAngle}rad)`;
+
+          // Apply the per-trial random visual offset
+          let rawPhase = ((dialAngle + trialVisualOffset) / Math.PI) % 2;
+          // Wrap accurately into -1 to 1 bounds
+          if (rawPhase > 1) rawPhase -= 2;
+          if (rawPhase < -1) rawPhase += 2;
+          
+          currentKnobValue = rawPhase; 
           document.getElementById("confirm-trial-btn").disabled = false;
         }, { passive: false });
+        
         window.addEventListener("pointerup", () => { dialDragging = false; });
+      }
+
+      // Unified Live Sensor Warning Logic
+      function startSensorWatchdog() {
+         if (sensorCheckInterval) clearInterval(sensorCheckInterval);
+         lastBeatPerfTime = performance.now();
+         sensorCheckInterval = setInterval(updateSensorWarning, 250);
+      }
+      
+      function stopSensorWatchdog() {
+         if (sensorCheckInterval) clearInterval(sensorCheckInterval);
+         document.getElementById("sensor-warning-overlay").classList.remove("visible");
+      }
+
+      function updateSensorWarning() {
+         const overlay = document.getElementById("sensor-warning-overlay");
+         const text = document.getElementById("sensor-warning-text");
+         const circle = document.getElementById("sensor-preview-circle");
+
+         if (!isFingerPresent) {
+             overlay.classList.add("visible");
+             text.innerHTML = "Place finger on camera<br><span style='font-size:0.85rem;color:var(--fg-muted);font-weight:400;margin-top:6px;display:block;'>Cover both lens and flash completely</span>";
+             circle.style.borderColor = "var(--fg)";
+             circle.style.boxShadow = "none";
+         } else if (currentSqiValue < SQI_WARN) {
+             overlay.classList.add("visible");
+             text.innerHTML = "Make the circle red<br><span style='font-size:0.85rem;color:var(--fg-muted);font-weight:400;margin-top:6px;display:block;'>Adjust pressure gently until the feed glows solid red</span>";
+             circle.style.borderColor = "var(--accent-red)";
+             circle.style.boxShadow = "0 0 20px rgba(255, 69, 58, 0.3)";
+         } else if (performance.now() - lastBeatPerfTime > 2500) {
+             // Re-calibration Lag state
+             overlay.classList.add("visible");
+             text.innerHTML = "Acquiring signal...<br><span style='font-size:0.85rem;color:var(--fg-muted);font-weight:400;margin-top:6px;display:block;'>Hold completely still</span>";
+             circle.style.borderColor = "var(--fg-muted)";
+             circle.style.boxShadow = "none";
+         } else {
+             overlay.classList.remove("visible");
+         }
       }
 
       function processIbi(beat) {
@@ -704,21 +732,29 @@
         baselineBPMs = []; baselineStartTime = Date.now();
         await WakeLockCtrl.request();
 
-        const bpmEl = document.getElementById("baseline-bpm"), statusEl = document.getElementById("baseline-status");
+        const bpmEl = document.getElementById("baseline-bpm");
         const progressCircle = document.getElementById("baseline-progress-circle");
+        const videoElement = document.getElementById("video-feed");
+        const previewCtx = document.getElementById("sensor-preview-circle").getContext("2d");
+        document.getElementById("sensor-preview-circle").width = 120 * (window.devicePixelRatio || 1);
+        document.getElementById("sensor-preview-circle").height = 120 * (window.devicePixelRatio || 1);
+
+        startSensorWatchdog();
         
         await BeatDetector.start({
-          video: document.getElementById("video-feed"), canvas: document.getElementById("sampling-canvas"),
-          onBeatCb: (beat) => { baselineBPMs.push(beat.instantBPM); bpmEl.textContent = Math.round(beat.averageBPM); },
-          onFingerChangeCb: (p) => {
-            document.getElementById("baseline-finger-overlay").classList.toggle("visible", !p);
-            if (!p) { statusEl.textContent = "Awaiting contact..."; statusEl.style.color = "var(--fg-muted)"; }
+          video: videoElement, canvas: document.getElementById("sampling-canvas"),
+          onBeatCb: (beat) => { 
+             baselineBPMs.push(beat.instantBPM); 
+             bpmEl.textContent = Math.round(beat.averageBPM); 
+             lastBeatPerfTime = performance.now();
           },
-          onSqiUpdateCb: (sqi) => {
-            if (document.getElementById("baseline-finger-overlay").classList.contains("visible")) return; 
-            if (sqi >= 0.008) { statusEl.textContent = "Perfect pressure. Hold still."; statusEl.style.color = "var(--accent-green)"; } 
-            else if (sqi >= 0.004) { statusEl.textContent = "Good signal. Recording..."; statusEl.style.color = "var(--fg-muted)"; } 
-            else { statusEl.textContent = "Signal weak: Adjust pressure."; statusEl.style.color = "var(--accent-red)"; }
+          onFingerChangeCb: (p) => { isFingerPresent = p; updateSensorWarning(); },
+          onSqiUpdateCb: (sqi) => { currentSqiValue = sqi; updateSensorWarning(); },
+          onPPGSampleCb: () => {
+             if (videoElement && videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
+                const dpr = window.devicePixelRatio || 1;
+                previewCtx.drawImage(videoElement, 0, 0, 120 * dpr, 120 * dpr);
+             }
           }
         });
 
@@ -729,6 +765,7 @@
           
           if (remaining <= 0) {
             clearInterval(baselineTimer);
+            stopSensorWatchdog();
             BeatDetector.setCallbacks({ onBeatCb: null, onFingerChangeCb: null, onPPGSampleCb: null, onSqiUpdateCb: null, onDicroticRejectCb: null });
             trialDetectorRunning = true; 
             
@@ -737,9 +774,7 @@
 
             if (baselineBPMs.length < 80 || diagnostics.clipRate > 20 || finalSqi < 0.002) {
                await BeatDetector.stop(); trialDetectorRunning = false;
-               statusEl.textContent = `Calibration failed. Restarting...`;
-               statusEl.style.color = "var(--accent-red)";
-               setTimeout(() => startBaseline(), 4000);
+               setTimeout(() => startBaseline(), 4000); // Silent restart if baseline fails
                return;
             }
 
@@ -758,10 +793,17 @@
         trialSqiTimeSeries = []; trialSqiBadSeconds = 0; trialLastSqiCheckTime = 0; trialDicroticRejections = [];
         
         currentInstantPeriod = 0; currentAveragePeriod = 0;
-        currentKnobValue = (Math.random() * 2 - 1) * KNOB_VALUE_RANGE;
+        
+        // Endless Dial offset logic
+        trialVisualOffset = (Math.random() * 2 - 1) * Math.PI; // Random offset per trial
+        dialAngle = 0; // Visual starting angle is zero
+        if(dialEl) dialEl.style.transform = `rotate(0rad)`;
+        
+        let rawPhase = ((dialAngle + trialVisualOffset) / Math.PI) % 2;
+        if (rawPhase > 1) rawPhase -= 2;
+        if (rawPhase < -1) rawPhase += 2;
+        currentKnobValue = rawPhase;
         trialInitialKnob = currentKnobValue;
-        dialAngle = ((currentKnobValue + KNOB_VALUE_RANGE) / (2 * KNOB_VALUE_RANGE)) * 2 * Math.PI - Math.PI;
-        if(dialEl) dialEl.style.transform = `rotate(${dialAngle}rad)`;
         
         trialRunning = true;
         document.getElementById("trial-label").textContent = currentTrialIndex < 0 ? `Practice Trial ${NUM_PRACTICES + currentTrialIndex + 1}` : `Trial ${currentTrialIndex + 1} of ${NUM_TRIALS}`;
@@ -769,17 +811,19 @@
         MotionDetector.start();
 
         const videoElement = document.getElementById("video-feed");
-        const sqiCameraUI = document.getElementById("trial-sqi-camera-warning");
-        const sqiPreviewCtx = document.getElementById("trial-camera-preview").getContext("2d");
-        document.getElementById("trial-camera-preview").width = 70 * (window.devicePixelRatio || 1);
-        document.getElementById("trial-camera-preview").height = 70 * (window.devicePixelRatio || 1);
-        let sqiWarningActive = false;
+        const previewCtx = document.getElementById("sensor-preview-circle").getContext("2d");
+        document.getElementById("sensor-preview-circle").width = 120 * (window.devicePixelRatio || 1);
+        document.getElementById("sensor-preview-circle").height = 120 * (window.devicePixelRatio || 1);
+        
+        startSensorWatchdog();
 
         const beatCb = (beat) => {
+          lastBeatPerfTime = performance.now();
           const prev = currentInstantPeriod;
           currentInstantPeriod = beat.instantPeriod; currentAveragePeriod = beat.averagePeriod;
           trialIP.push(currentInstantPeriod); trialAP.push(currentAveragePeriod);
           trialKS.push(currentKnobValue); trialIE.push(prev - currentInstantPeriod);
+          
           const delay = (currentAveragePeriod / 2) * currentKnobValue;
           trialCD.push(delay); trialRecordedHR.push(beat.instantBPM); trialInstantBpms.push(beat.averageBPM);
           
@@ -800,7 +844,7 @@
         };
 
         const fCb = (p) => {
-          document.getElementById("trial-finger-overlay").classList.toggle("visible", !p);
+          isFingerPresent = p; updateSensorWarning();
           if (!p) { trialFingerLossEvents.push({ lostAt: performance.now() }); } 
           else if (trialFingerLossEvents.length > 0 && !trialFingerLossEvents[trialFingerLossEvents.length - 1].restoredAt) {
             trialFingerLossEvents[trialFingerLossEvents.length - 1].restoredAt = performance.now();
@@ -808,24 +852,18 @@
         };
 
         const sqiCb = (sqi) => {
+          currentSqiValue = sqi; updateSensorWarning();
           const now = Date.now();
           if (trialLastSqiCheckTime > 0 && sqi < SQI_WARN) { trialSqiBadSeconds += (now - trialLastSqiCheckTime) / 1000; }
           trialLastSqiCheckTime = now;
           trialSqiTimeSeries.push({ time: now, sqi: Math.round(sqi * 100000) / 100000 });
-
-          if (sqi < 0.004) {
-            sqiWarningActive = true;
-            sqiCameraUI.classList.add("visible");
-          } else if (sqi > 0.007) {
-            sqiWarningActive = false;
-            sqiCameraUI.classList.remove("visible");
-          }
         };
 
-        const ppgCb = (sample) => {
-           if (sqiWarningActive && videoElement && videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
+        const ppgCb = () => {
+           // Continually update the sensor feed so it's ready when the overlay needs it
+           if (videoElement && videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
               const dpr = window.devicePixelRatio || 1;
-              sqiPreviewCtx.drawImage(videoElement, 0, 0, 70 * dpr, 70 * dpr);
+              previewCtx.drawImage(videoElement, 0, 0, 120 * dpr, 120 * dpr);
            }
         };
 
@@ -836,9 +874,8 @@
       }
 
       function confirmTrial() {
-        trialRunning = false; MotionDetector.stop();
+        trialRunning = false; MotionDetector.stop(); stopSensorWatchdog();
         BeatDetector.setCallbacks({ onBeatCb: null, onFingerChangeCb: null, onSqiUpdateCb: null, onDicroticRejectCb: null, onPPGSampleCb: null });
-        document.getElementById("trial-sqi-camera-warning").classList.remove("visible");
         
         show("screen-ema");
         document.getElementById("ema-progress-text").textContent = "CONFIDENCE";
@@ -857,7 +894,7 @@
         
         btn.onclick = () => {
           const totalBeats = trialCleanBeats + trialFlaggedBeats;
-          const td = { type: "trial", isPractice: currentTrialIndex < 0, initialKnobValue: trialInitialKnob, instantPeriods: [...trialIP], averagePeriods: [...trialAP], knobScales: [...trialKS], currentDelays: [...trialCD], instantErrs: [...trialIE], recordedHR: [...trialRecordedHR], instantBpms: [...trialInstantBpms], toneTimings: [...trialToneTimings], fingerLossEvents: [...trialFingerLossEvents], confidence: parseInt(sl.value), bodyPos: -1, ppgDiagnostics: BeatDetector.getDiagnostics(), ibiFlags: [...trialIbiFlags], sqiTimeSeries: [...trialSqiTimeSeries], dicroticRejections: [...trialDicroticRejections], qualitySummary: { totalBeats, cleanBeats: trialCleanBeats, flaggedBeats: trialFlaggedBeats, flagRate: totalBeats > 0 ? Math.round(trialFlaggedBeats / totalBeats * 10000) / 100 : 0, dicroticRejectsCount: trialDicroticRejections.length, sqiBadSeconds: Math.round(trialSqiBadSeconds * 10) / 10, sqiFinalValue: Math.round(BeatDetector.getSqi() * 100000) / 100000, ibiChangeThreshold: IBI_CHANGE_THRESHOLD, sqiGoodThreshold: SQI_GOOD, sqiWarnThreshold: SQI_WARN } };
+          const td = { type: "trial", isPractice: currentTrialIndex < 0, initialKnobValue: trialInitialKnob, visualOffset: trialVisualOffset, instantPeriods: [...trialIP], averagePeriods: [...trialAP], knobScales: [...trialKS], currentDelays: [...trialCD], instantErrs: [...trialIE], recordedHR: [...trialRecordedHR], instantBpms: [...trialInstantBpms], toneTimings: [...trialToneTimings], fingerLossEvents: [...trialFingerLossEvents], confidence: parseInt(sl.value), bodyPos: -1, ppgDiagnostics: BeatDetector.getDiagnostics(), ibiFlags: [...trialIbiFlags], sqiTimeSeries: [...trialSqiTimeSeries], dicroticRejections: [...trialDicroticRejections], qualitySummary: { totalBeats, cleanBeats: trialCleanBeats, flaggedBeats: trialFlaggedBeats, flagRate: totalBeats > 0 ? Math.round(trialFlaggedBeats / totalBeats * 10000) / 100 : 0, dicroticRejectsCount: trialDicroticRejections.length, sqiBadSeconds: Math.round(trialSqiBadSeconds * 10) / 10, sqiFinalValue: Math.round(BeatDetector.getSqi() * 100000) / 100000, ibiChangeThreshold: IBI_CHANGE_THRESHOLD, sqiGoodThreshold: SQI_GOOD, sqiWarnThreshold: SQI_WARN } };
           
           if (currentTrialIndex >= 0 && (currentTrialIndex + 1) % BODY_MAP_EVERY === 0) {
             show("screen-bodymap");
