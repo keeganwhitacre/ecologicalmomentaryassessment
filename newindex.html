@@ -8,22 +8,23 @@
   <link rel="manifest" href="manifest.json">
   <title>Interoception Study</title>
   <style>
-    /* --- Premium, Tactile OLED Design Tokens --- */
+    /* --- Leica Monochromatic OLED Design Tokens --- */
     :root {
-      --bg: #000000; /* Pure OLED Black */
-      --bg-surface: #121214; /* Deep warm charcoal */
-      --bg-elevated: #1c1c1f;
-      --border: #27272a;
-      --fg: #f4f4f5; /* Zinc 50 */
-      --fg-muted: #a1a1aa; /* Zinc 400 */
+      --bg: #000000; 
+      --bg-surface: #111111; 
+      --bg-elevated: #1c1c1e;
+      --border: #2c2c2e;
+      --fg: #ffffff; 
+      --fg-muted: #8e8e93; 
       
-      /* Warm, film-like accents instead of clinical blues */
-      --accent: #f59e0b; /* Amber 500 */
-      --accent-hover: #d97706; /* Amber 600 */
-      --accent-red: #ef4444; 
-      --accent-green: #10b981;
+      /* Pure monochromatic accent */
+      --accent: #ffffff; 
+      --accent-hover: #e5e5ea; 
       
-      --radius: 16px; /* Softer, friendlier corners */
+      --accent-red: #ff453a; 
+      --accent-green: #32d74b;
+      
+      --radius: 14px; 
       --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Consolas, monospace;
     }
@@ -41,21 +42,22 @@
       -webkit-user-select: none;
     }
 
+    /* Fixed Screen Transition Logic */
     .screen {
       position: absolute; inset: 0;
       display: flex; flex-direction: column;
       padding: calc(env(safe-area-inset-top, 24px) + 24px) 24px calc(env(safe-area-inset-bottom, 24px) + 24px);
       opacity: 0; pointer-events: none;
-      transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: opacity 0.3s ease-in-out;
       overflow-y: auto;
     }
     .screen.active { opacity: 1; pointer-events: all; }
 
     /* Typography */
-    h1 { font-size: 1.75rem; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 8px; color: var(--fg); }
-    h2 { font-size: 1.1rem; font-weight: 400; color: var(--fg-muted); margin-bottom: 32px; letter-spacing: -0.01em; }
-    p { font-size: 1.05rem; line-height: 1.5; color: var(--fg-muted); margin-bottom: 24px; font-weight: 400; }
-    .label { font-size: 0.8rem; font-weight: 600; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; display: block; }
+    h1 { font-size: 1.75rem; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 8px; color: var(--fg); text-align: center; }
+    h2 { font-size: 1.1rem; font-weight: 400; color: var(--fg-muted); margin-bottom: 32px; letter-spacing: -0.01em; text-align: center; }
+    p { font-size: 1.05rem; line-height: 1.5; color: var(--fg-muted); margin-bottom: 24px; font-weight: 400; text-align: center; }
+    .label { font-size: 0.8rem; font-weight: 600; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; display: block; text-align: center;}
 
     /* Tactile Buttons */
     .btn {
@@ -69,10 +71,10 @@
     
     .btn-primary { 
       background: var(--accent); color: #000; 
-      box-shadow: 0 4px 14px rgba(245, 158, 11, 0.2);
+      box-shadow: 0 4px 14px rgba(255, 255, 255, 0.15);
     }
-    .btn-primary:active { background: var(--accent-hover); box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3); }
-    .btn-primary:disabled { opacity: 0.3; pointer-events: none; box-shadow: none; }
+    .btn-primary:active { background: var(--accent-hover); box-shadow: 0 2px 8px rgba(255, 255, 255, 0.2); }
+    .btn-primary:disabled { opacity: 0.3; pointer-events: none; box-shadow: none; background: #333; color: #888; }
     
     .btn-secondary {
       background: var(--bg-surface); color: var(--fg);
@@ -86,7 +88,7 @@
     /* Inputs */
     .input-group { width: 100%; max-width: 340px; margin: 0 auto 32px; text-align: left; }
     .input-group input {
-      width: 100%; padding: 18px;
+      width: 100%; padding: 18px; text-align: center;
       background: var(--bg-surface); border: 1px solid var(--border);
       border-radius: var(--radius); color: var(--fg);
       font-family: var(--font); font-size: 1.1rem; outline: none;
@@ -134,28 +136,27 @@
     .bubble:active { transform: scale(0.98); }
     .bubble.selected { 
       background: var(--accent); border-color: var(--accent); color: #000; 
-      box-shadow: 0 4px 14px rgba(245, 158, 11, 0.2); 
+      box-shadow: 0 4px 14px rgba(255, 255, 255, 0.15); 
     }
 
     /* ---- Baseline ---- */
     #screen-baseline { align-items: center; justify-content: center; gap: 40px; }
-    .baseline-header { text-align: center; }
     
     .progress-ring {
-      width: 160px; height: 160px; position: relative;
+      width: 180px; height: 180px; position: relative;
       display: flex; align-items: center; justify-content: center;
       margin: 0 auto;
     }
     .progress-ring svg { position: absolute; inset: 0; transform: rotate(-90deg); z-index: 2; width: 100%; height: 100%; }
-    .progress-ring circle { fill: none; stroke-width: 4; }
+    .progress-ring circle { fill: none; stroke-width: 3; }
     .progress-ring .track { stroke: var(--bg-elevated); }
     .progress-ring .fill {
-      stroke: var(--accent); stroke-dasharray: 471; stroke-dashoffset: 471;
+      stroke: var(--accent); stroke-dasharray: 534; stroke-dashoffset: 534;
       stroke-linecap: round; transition: stroke-dashoffset 1s linear;
     }
     
     .baseline-bpm-box { text-align: center; z-index: 3; }
-    .baseline-bpm-number { font-size: 3.5rem; font-weight: 500; font-family: var(--font-mono); color: var(--fg); line-height: 1; letter-spacing: -0.04em; }
+    .baseline-bpm-number { font-size: 3.8rem; font-weight: 500; font-family: var(--font-mono); color: var(--fg); line-height: 1; letter-spacing: -0.04em; }
     .baseline-bpm-label { font-size: 0.8rem; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 4px; }
 
     .baseline-status { font-size: 1rem; color: var(--fg-muted); text-align: center; min-height: 1.5em; transition: color 0.3s; margin-top: 24px; font-weight: 500; }
@@ -198,7 +199,7 @@
       position: absolute; top: 12px; left: 50%;
       width: 4px; height: 24px; background: var(--accent);
       border-radius: 2px; transform: translateX(-50%);
-      box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+      box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
     }
 
     .dial-labels {
@@ -220,7 +221,7 @@
     .sqi-preview-circle {
       width: 70px; height: 70px; border-radius: 50%;
       background: #000; border: 2px solid var(--accent-red);
-      object-fit: cover; box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+      object-fit: cover; box-shadow: 0 0 20px rgba(255, 69, 58, 0.3);
     }
     .sqi-warning-text { font-size: 0.9rem; font-weight: 500; color: var(--accent-red); text-transform: uppercase; letter-spacing: 0.05em; }
 
@@ -265,8 +266,8 @@
 
   <!-- 1. Participant ID -->
   <div class="screen active" id="screen-participant">
-    <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 24px;">
+    <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 24px;">
         <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
       </svg>
       <h1>Interoception Study</h1>
@@ -310,26 +311,28 @@
         <rect x="5" y="2" width="14" height="20" rx="4" ry="4"/>
         <circle cx="12" cy="8" r="3" fill="var(--accent-red)" stroke="none"/> 
       </svg>
-      <p style="text-align: center; color: #fff; font-size: 1.1rem; max-width: 260px;">Place your finger gently over the rear camera and flash.</p>
+      <p>Place your finger gently over the rear camera and flash.</p>
     </div>
 
-    <div class="baseline-header">
-      <h1>Calibration</h1>
-      <p class="label">Keep your finger completely still</p>
-    </div>
-
-    <div class="progress-ring">
-      <svg viewBox="0 0 160 160">
-        <circle class="track" cx="80" cy="80" r="75"/>
-        <circle class="fill" id="baseline-progress-circle" cx="80" cy="80" r="75"/>
-      </svg>
-      <div class="baseline-bpm-box">
-        <div class="baseline-bpm-number" id="baseline-bpm">--</div>
-        <div class="baseline-bpm-label">BPM</div>
+    <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
+      <div style="margin-bottom: 40px;">
+        <h1>Calibration</h1>
+        <p class="label">Keep your finger completely still</p>
       </div>
-    </div>
 
-    <p class="baseline-status" id="baseline-status">Awaiting contact...</p>
+      <div class="progress-ring">
+        <svg viewBox="0 0 180 180">
+          <circle class="track" cx="90" cy="90" r="85"/>
+          <circle class="fill" id="baseline-progress-circle" cx="90" cy="90" r="85"/>
+        </svg>
+        <div class="baseline-bpm-box">
+          <div class="baseline-bpm-number" id="baseline-bpm">--</div>
+          <div class="baseline-bpm-label">BPM</div>
+        </div>
+      </div>
+
+      <p class="baseline-status" id="baseline-status">Awaiting contact...</p>
+    </div>
   </div>
 
   <!-- 5. Trial -->
@@ -339,7 +342,7 @@
         <rect x="5" y="2" width="14" height="20" rx="4" ry="4"/>
         <circle cx="12" cy="8" r="3" fill="var(--accent-red)" stroke="none"/> 
       </svg>
-      <p style="text-align: center; color: #fff; font-size: 1.1rem;">Please return your finger to the camera.</p>
+      <p>Please return your finger to the camera.</p>
     </div>
 
     <div class="movement-warning" id="trial-movement-warning">
@@ -353,7 +356,7 @@
     </div>
 
     <div class="trial-header">
-      <p class="label" id="trial-label" style="color: var(--accent);">Trial 1</p>
+      <p class="label" id="trial-label" style="color: var(--fg-muted);">Trial 1</p>
     </div>
 
     <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; width: 100%;">
@@ -380,10 +383,8 @@
   <!-- 6. Body map -->
   <div class="screen" id="screen-bodymap">
     <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
-      <h1 style="text-align:center;">Sensation</h1>
-      <p style="text-align:center; color:var(--fg-muted); margin-bottom: 32px;">
-        Where did you primarily feel your heartbeat?
-      </p>
+      <h1>Sensation</h1>
+      <p>Where did you primarily feel your heartbeat?</p>
       
       <button class="btn btn-secondary btn-block" id="nowhere-btn" style="margin-bottom: 16px; border-radius: 12px; font-weight: 500;">Did not feel it</button>
       
@@ -403,7 +404,7 @@
 
   <!-- 7. End -->
   <div class="screen" id="screen-end">
-    <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
+    <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;">
       <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 24px;">
         <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
         <polyline points="22 4 12 14.01 9 11.01"/>
@@ -445,7 +446,7 @@
     const MotionDetector = window.ePATCore.MotionDetector;
 
     // ============================================================
-    // UPLOAD MODULE (Unchanged)
+    // UPLOAD MODULE
     // ============================================================
     const UPLOAD_CONFIG = { endpoint: "epat-upload.keeganwhitacre.workers.dev", enabled: true };
     const Upload = (function () {
@@ -548,7 +549,6 @@
 
         nextBtn.textContent = currentIndex === activeItems.length - 1 ? "Submit Check-In" : "Next";
         
-        // Trigger reflow for fade in
         container.classList.remove("fade-out", "fade-in");
         void container.offsetWidth;
         container.classList.add("fade-in");
@@ -562,7 +562,6 @@
             currentIndex++;
             renderCurrentItem();
           } else {
-            // Done
             sessionResponses.submittedAt = new Date().toISOString();
             App.submitEMAResponses(sessionResponses);
           }
@@ -586,7 +585,7 @@
     const Onboarding = (function() {
       const STEPS = [
         { id: "audio", title: "Audio Setup", text: "This task requires precision timing.<br><br>Please use <strong>wired earphones</strong> or the <strong>built-in device speaker</strong>.<br><br><span style='color:var(--accent-red); font-size:0.9rem;'>⚠️ Bluetooth headphones introduce delay and cannot be used.</span>", btnText: "I'm using wired/built-in audio" },
-        { id: "test", title: "Sound Check", text: "<span style='font-size:0.9rem; color:var(--fg-muted);'>iPhone users: Ensure silent switch is OFF.</span><br><br>Let's make sure you can hear the tones.", btnText: "🔊 Play Test Tone", action: "playTest" },
+        { id: "test", title: "Sound Check", text: "<span style='font-size:0.9rem; color:var(--fg-muted);'>iPhone users: Ensure silent switch is OFF.</span><br><br>Let's make sure you can hear the tones.", action: "test" },
         { id: "prep", title: "Sensor Prep", text: "Place the tip of your index finger gently over both the <strong>rear camera lens</strong> and the <strong>flashlight</strong>.<br><br>Keep perfectly still.", btnText: "Start Calibration" },
         { id: "post", title: "Calibration Complete", text: "In the main task, you will hear a series of tones representing your heartbeats.<br><br>Rotate the dial until the tone feels perfectly <strong>in sync</strong> with your actual heartbeat.", btnText: "Continue" },
         { id: "rules", title: "Instructions", text: "Do <strong>not</strong> try to feel your pulse with your other hand. Tune into your internal perception.<br><br>You will start with 2 practice trials.", btnText: "Begin Practice" }
@@ -600,14 +599,14 @@
         container.innerHTML = "";
         const step = STEPS[currentStepIndex];
         
-        container.innerHTML = `<h1 style="text-align:center; margin-bottom:24px;">${step.title}</h1><p style="text-align:center;">${step.text}</p>`;
+        container.innerHTML = `<h1>${step.title}</h1><p>${step.text}</p>`;
         
-        if (step.id === "test") {
-          btn.textContent = step.btnText;
+        if (step.action === "test") {
+          btn.textContent = "🔊 Play Test Tone";
           btn.onclick = () => {
             AudioEngine.resume();
             AudioEngine.playLow(); setTimeout(() => AudioEngine.playLow(), 400); setTimeout(() => AudioEngine.playLow(), 800);
-            container.innerHTML += `<p style="text-align:center; margin-top:24px; font-weight:600; color:var(--accent);">Did you hear the tone?</p>`;
+            container.innerHTML += `<p style="margin-top:24px; font-weight:600; color:var(--fg);">Did you hear the tone?</p>`;
             btn.textContent = "Yes, continue";
             btn.onclick = nextStep;
           };
@@ -654,19 +653,15 @@
       const screens = {};
       let dialEl, dialAngle = 0, dialDragging = false, dialCx = 0, dialCy = 0, lastAngle = 0;
 
+      // FIX: The core fix for the "black screen" bug.
+      // Removed inline style.opacity = 0 manipulation which was breaking revisits.
       function show(id) {
-        document.querySelectorAll(".finger-overlay").forEach((el) => el.classList.remove("visible"));
-        if (screens.active) {
-           screens.active.style.opacity = 0;
-           setTimeout(() => {
-              screens.active.classList.remove("active");
-              screens.active = document.getElementById(id);
-              screens.active.classList.add("active");
-           }, 300); // Wait for fade out
-        } else {
-           screens.active = document.getElementById(id);
-           screens.active.classList.add("active");
-        }
+        document.querySelectorAll(".finger-overlay").forEach(el => el.classList.remove("visible"));
+        if (screens.active) screens.active.classList.remove("active");
+        
+        const targetScreen = document.getElementById(id);
+        screens.active = targetScreen;
+        if (screens.active) screens.active.classList.add("active");
       }
 
       function initDial() {
@@ -711,14 +706,10 @@
 
         const bpmEl = document.getElementById("baseline-bpm"), statusEl = document.getElementById("baseline-status");
         const progressCircle = document.getElementById("baseline-progress-circle");
-        let beatCount = 0;
         
         await BeatDetector.start({
           video: document.getElementById("video-feed"), canvas: document.getElementById("sampling-canvas"),
-          onBeatCb: (beat) => {
-            baselineBPMs.push(beat.instantBPM); bpmEl.textContent = Math.round(beat.averageBPM);
-            beatCount++; 
-          },
+          onBeatCb: (beat) => { baselineBPMs.push(beat.instantBPM); bpmEl.textContent = Math.round(beat.averageBPM); },
           onFingerChangeCb: (p) => {
             document.getElementById("baseline-finger-overlay").classList.toggle("visible", !p);
             if (!p) { statusEl.textContent = "Awaiting contact..."; statusEl.style.color = "var(--fg-muted)"; }
@@ -727,11 +718,11 @@
             if (document.getElementById("baseline-finger-overlay").classList.contains("visible")) return; 
             if (sqi >= 0.008) { statusEl.textContent = "Perfect pressure. Hold still."; statusEl.style.color = "var(--accent-green)"; } 
             else if (sqi >= 0.004) { statusEl.textContent = "Good signal. Recording..."; statusEl.style.color = "var(--fg-muted)"; } 
-            else { statusEl.textContent = "Signal weak: Adjust pressure."; statusEl.style.color = "var(--accent)"; }
+            else { statusEl.textContent = "Signal weak: Adjust pressure."; statusEl.style.color = "var(--accent-red)"; }
           }
         });
 
-        const circ = 2 * Math.PI * 75;
+        const circ = 2 * Math.PI * 85;
         baselineTimer = setInterval(async () => {
           const elapsed = (Date.now() - baselineStartTime) / 1000, remaining = Math.max(0, BASELINE_DURATION_S - elapsed);
           progressCircle.style.strokeDashoffset = circ * (1 - Math.min(1, elapsed / BASELINE_DURATION_S));
@@ -780,7 +771,6 @@
         const videoElement = document.getElementById("video-feed");
         const sqiCameraUI = document.getElementById("trial-sqi-camera-warning");
         const sqiPreviewCtx = document.getElementById("trial-camera-preview").getContext("2d");
-        // Ensure preview canvas is correct resolution
         document.getElementById("trial-camera-preview").width = 70 * (window.devicePixelRatio || 1);
         document.getElementById("trial-camera-preview").height = 70 * (window.devicePixelRatio || 1);
         let sqiWarningActive = false;
@@ -833,7 +823,6 @@
         };
 
         const ppgCb = (sample) => {
-           // If warning is active, draw live feed to the circular canvas
            if (sqiWarningActive && videoElement && videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
               const dpr = window.devicePixelRatio || 1;
               sqiPreviewCtx.drawImage(videoElement, 0, 0, 70 * dpr, 70 * dpr);
@@ -851,7 +840,6 @@
         BeatDetector.setCallbacks({ onBeatCb: null, onFingerChangeCb: null, onSqiUpdateCb: null, onDicroticRejectCb: null, onPPGSampleCb: null });
         document.getElementById("trial-sqi-camera-warning").classList.remove("visible");
         
-        // Confidence Rating using "One Thing" style container
         show("screen-ema");
         document.getElementById("ema-progress-text").textContent = "CONFIDENCE";
         const container = document.getElementById("ema-single-container");
@@ -901,6 +889,7 @@
 
           sessionData = { sessionId: "ses_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8), participantId: "", day: parseInt(urlParams.get('day')) || null, type: "", phases: [], currentPhase: 0, counterbalance: null, startedAt: null, wallClockAnchor: null, perfAnchor: null, device: null, data: [], status: "in_progress" };
 
+          // Routing Fix: This properly routes ?session=emaafternoon to the right logic
           if (sessionType.startsWith('ema')) {
             sessionData.type = "ema_only"; sessionData.phases = [sessionType];
             document.getElementById('task-subtitle').textContent = sessionType === 'emamorning' ? "Morning Check-In" : sessionType === 'emaevening' ? "Evening Check-In" : "Afternoon Check-In";
@@ -922,8 +911,16 @@
           function runNextPhase() {
             const phase = sessionData.phases[sessionData.currentPhase];
             if (!phase) { finalizeSession(); return; }
-            if (phase.startsWith('ema')) { currentEmaSessionType = phase; show("screen-ema"); EMA.start(phase); } 
-            else if (phase === 'pat') { show("screen-onboarding"); Onboarding.start(); }
+            
+            if (phase.startsWith('ema')) { 
+              currentEmaSessionType = phase; 
+              show("screen-ema"); 
+              EMA.start(phase); 
+            } 
+            else if (phase === 'pat') { 
+              show("screen-onboarding"); 
+              Onboarding.start(); 
+            }
           }
 
           window._epatAdvancePhase = function advancePhase() { sessionData.currentPhase++; if (sessionData.currentPhase >= sessionData.phases.length) { finalizeSession(); } else { runNextPhase(); } };
