@@ -553,6 +553,114 @@
 
 
     // ============================================================
+    // UPLOAD MODULE
+    // ------------------------------------------------------------
+    // posts the completed session descriptor to a backend.
+    //
+    // current backend: cloudflare worker → private github repo.
+    // future backend: qualtrics (or other osu-approved). to migrate,
+    // change UPLOAD_CONFIG.endpoint — the POST body shape stays the same.
+    //
+    // failure model:
+    //   1. save to localStorage before trying to post (survives refresh)
+    //   2. attempt POST
+    //   3. on success: remove from localStorage
+    //   4. on failure: leave in localStorage, retry on next launch
+    //   5. manual download button remains as a third-layer escape valve
+    // ============================================================
+    const UPLOAD_CONFIG = {
+      // TODO replace with your cloudflare worker url after deploying
+      endpoint: "https://epat-upload.REPLACE-ME.workers.dev",
+      enabled: false,  // flip to true once endpoint is live
+    };
+
+    const Upload = (function () {
+      const PENDING_KEY = "epat_pending_uploads";
+
+      function loadPending() {
+        try { return JSON.parse(localStorage.getItem(PENDING_KEY) || "{}"); }
+        catch (e) { return {}; }
+      }
+      function savePending(obj) {
+        try { localStorage.setItem(PENDING_KEY, JSON.stringify(obj)); } catch (e) {}
+      }
+      function stashLocally(session) {
+        const pending = loadPending();
+        pending[session.sessionId] = session;
+        savePending(pending);
+      }
+      function clearLocal(sessionId) {
+        const pending = loadPending();
+        delete pending[sessionId];
+        savePending(pending);
+      }
+
+      async function postOne(session) {
+        if (!UPLOAD_CONFIG.enabled) {
+          // upload disabled — leave in localStorage as a breadcrumb
+          return { ok: false, reason: "upload_disabled" };
+        }
+        try {
+          const res = await fetch(UPLOAD_CONFIG.endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(session),
+          });
+          if (!res.ok) return { ok: false, reason: "http_" + res.status };
+          return { ok: true };
+        } catch (e) {
+          return { ok: false, reason: "network_" + (e.message || "unknown") };
+        }
+      }
+
+      return {
+        // called when a session finalizes. stashes locally, tries to post,
+        // clears the stash on success. failures just leave the session in
+        // localStorage for the next launch to retry.
+        async send(session) {
+          stashLocally(session);
+          const result = await postOne(session);
+          if (result.ok) clearLocal(session.sessionId);
+          return result;
+        },
+
+        // called at app init — retries any sessions stuck in localStorage
+        // from a previous page load where upload failed.
+        async retryPending() {
+          if (!UPLOAD_CONFIG.enabled) return;
+          const pending = loadPending();
+          const ids = Object.keys(pending);
+          for (const id of ids) {
+            const result = await postOne(pending[id]);
+            if (result.ok) clearLocal(id);
+          }
+        },
+
+        pendingCount() { return Object.keys(loadPending()).length; },
+      };
+    })();
+
+    // ============================================================
+    // DROPOUT HANDLER
+    // ------------------------------------------------------------
+    // discard policy: if the participant closes the tab mid-session,
+    // the session is thrown away. no partial saves.
+    // this matches the agreed pilot policy — simpler to analyze,
+    // and short sessions make a restart cheap for participants.
+    //
+    // implementation: the session is only uploaded in finalizeSession().
+    // if beforeunload fires before that, nothing gets sent. the only
+    // remaining concern is localStorage stash — which only happens
+    // *inside* Upload.send(), which is only called by finalizeSession().
+    // so mid-session closes leave zero trace. exactly what we want.
+    // ============================================================
+    window.addEventListener("beforeunload", () => {
+      if (sessionData && sessionData.status === "in_progress") {
+        // nothing to do — we deliberately do not stash. discard.
+      }
+    });
+
+    // ============================================================
     // EMA MODULE
     // items are data, not code. add/remove/reword by editing EMA_ITEMS.
     // render(sessionType) builds the screen. collectResponses() grabs values.
@@ -774,7 +882,64 @@
         };
       }
 
-      let sessionData = { participantID: "", taskType: "", date: null, device: null, data: [] };
+      // ============================================================
+      // SESSION DESCRIPTOR
+      // ------------------------------------------------------------
+      // one object carries everything about this session from start
+      // to upload. every downstream feature (pairing, dropout, upload)
+      // reads from here instead of reconstructing state from url params.
+      //
+      // shape:
+      //   sessionId        unique id, generated at start
+      //   participantId    from url or input
+      //   day              day N of the protocol (for multi-day EMA)
+      //   type             "ema_only" | "pat_only" | "paired"
+      //   phases           ordered list of phase names for this session
+      //   currentPhase     index into phases
+      //   counterbalance   "ema_first" | "pat_first" (only for paired)
+      //   startedAt        iso wall clock
+      //   wallClockAnchor  Date.now() at start — for converting perf timestamps
+      //   perfAnchor       performance.now() at start
+      //   device           device metadata
+      //   data             array, appended to by each phase
+      //   status           "in_progress" | "complete" | "abandoned"
+      // ============================================================
+      let sessionData = null;
+
+      function newSessionDescriptor() {
+        return {
+          sessionId: "ses_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
+          participantId: "",
+          day: null,
+          type: "",
+          phases: [],
+          currentPhase: 0,
+          counterbalance: null,
+          startedAt: null,
+          wallClockAnchor: null,
+          perfAnchor: null,
+          device: null,
+          detectionAlgorithm: "wabp_onset",
+          data: [],
+          status: "in_progress",
+
+          // legacy back-compat — older code reads these names, point them
+          // at the new fields so we don't have to touch every call site at once
+          get participantID() { return this.participantId; },
+          set participantID(v) { this.participantId = v; },
+          get taskType() {
+            // back-compat: reconstruct "EMA" / "PAT" from phase
+            const phase = this.phases[this.currentPhase];
+            if (!phase) return "";
+            if (phase.startsWith("ema")) return "EMA";
+            if (phase === "pat") return "PAT";
+            return phase.toUpperCase();
+          },
+          set taskType(v) { /* ignored — phases drive this now */ },
+          get date() { return this.startedAt; },
+          set date(v) { this.startedAt = v; },
+        };
+      }
       let currentTrialIndex = -NUM_PRACTICES, currentKnobValue = 0, trialRunning = false, trialDetectorRunning = false;
       let trialIP = [], trialAP = [], trialKS = [], trialCD = [], trialIE = [], trialRecordedHR = [], trialInstantBpms = [];
       let trialToneTimings = [], trialFingerLossEvents = [], trialInitialKnob = 0;
@@ -1121,7 +1286,8 @@
     trialDetectorRunning = false;
     await BeatDetector.stop();
     WakeLockCtrl.release();
-    show("screen-end");
+    // pat phase done — let the session router decide what's next
+    window._epatAdvancePhase();
   } else {
     startTrial();
   }
@@ -1131,7 +1297,8 @@
         // module handles item collection — just take what it gives us and log
         const responses = EMA.collectResponses(currentEmaSessionType);
         sessionData.data.push(responses);
-        show("screen-end");
+        // ema phase done — let the session router decide what's next
+        window._epatAdvancePhase();
       }
 
       return {
@@ -1161,38 +1328,90 @@
 
           if (urlId) document.getElementById('participant-input').value = urlId;
 
-          if (sessionType.startsWith('ema')) {
-            sessionData.taskType = "EMA";
-            currentEmaSessionType = sessionType;
+          // build the session descriptor from url state
+          sessionData = newSessionDescriptor();
 
-            // subtitle on the participant screen — ema title itself is set by EMA.render
-            if (sessionType === 'emamorning') {
-              document.getElementById('task-subtitle').textContent = "Morning Check-In";
-            } else if (sessionType === 'emaevening') {
-              document.getElementById('task-subtitle').textContent = "Evening Check-In";
-            } else {
-              document.getElementById('task-subtitle').textContent = "Afternoon Check-In";
-            }
+          // day param is optional — for multi-day EMA protocols
+          const urlDay = urlParams.get('day');
+          if (urlDay) sessionData.day = parseInt(urlDay, 10);
+
+          // phases are driven by session type.
+          // "emamorning" / "emaafternoon" / "emaevening" → ema only
+          // "pat" → pat only
+          // "pair_morning" / "pair_afternoon" / "pair_evening" → paired, ema + pat
+          // counterbalance param decides order when paired (default: ema_first)
+          if (sessionType.startsWith('ema')) {
+            sessionData.type = "ema_only";
+            sessionData.phases = [sessionType];
+            document.getElementById('task-subtitle').textContent =
+              sessionType === 'emamorning'   ? "Morning Check-In"   :
+              sessionType === 'emaevening'   ? "Evening Check-In"   :
+                                               "Afternoon Check-In";
+          } else if (sessionType.startsWith('pair')) {
+            sessionData.type = "paired";
+            // time-of-day derived from the suffix (morning/afternoon/evening)
+            const slot = sessionType.replace('pair_', '');
+            const emaPhase = 'ema' + slot;
+            // counterbalance — url param wins, else default ema_first
+            const cb = urlParams.get('cb') === 'pat_first' ? 'pat_first' : 'ema_first';
+            sessionData.counterbalance = cb;
+            sessionData.phases = cb === 'ema_first' ? [emaPhase, 'pat'] : ['pat', emaPhase];
+            document.getElementById('task-subtitle').textContent =
+              slot === 'morning'   ? "Morning Session"   :
+              slot === 'evening'   ? "Evening Session"   :
+                                     "Afternoon Session";
+          } else {
+            // default / pat-only
+            sessionData.type = "pat_only";
+            sessionData.phases = ['pat'];
           }
 
           document.getElementById("start-btn").onclick = () => {
             const pid = document.getElementById("participant-input").value.trim();
             if (!pid) return;
-            sessionData.participantID = pid; sessionData.date = new Date().toISOString();
+            sessionData.participantId = pid;
+            sessionData.startedAt = new Date().toISOString();
+            sessionData.wallClockAnchor = Date.now();
+            sessionData.perfAnchor = performance.now();
             sessionData.device = collectDeviceMetadata();
-            sessionData.detectionAlgorithm = 'wabp_onset';
             AudioEngine.resume();
+            runNextPhase();
+          };
 
-            if (sessionData.taskType === "EMA") {
-              // render items from data, then show screen
-              EMA.render(currentEmaSessionType);
+          // phase dispatcher — reads sessionData.phases[currentPhase] and
+          // launches the right screen. each phase, when done, calls
+          // advancePhase() which either runs the next phase or finalizes.
+          function runNextPhase() {
+            const phase = sessionData.phases[sessionData.currentPhase];
+            if (!phase) { finalizeSession(); return; }
+
+            if (phase.startsWith('ema')) {
+              currentEmaSessionType = phase;
+              EMA.render(phase);
               show("screen-ema");
-            } else {
-              sessionData.taskType = "PAT";
+            } else if (phase === 'pat') {
               show("screen-onboarding");
               document.querySelector('.onboarding-step[data-step="1"]').classList.add("active");
             }
+          }
+
+          // called by each phase when it completes
+          window._epatAdvancePhase = function advancePhase() {
+            sessionData.currentPhase++;
+            if (sessionData.currentPhase >= sessionData.phases.length) {
+              finalizeSession();
+            } else {
+              runNextPhase();
+            }
           };
+
+          function finalizeSession() {
+            sessionData.status = "complete";
+            sessionData.completedAt = new Date().toISOString();
+            // upload happens here — stubbed for now, filled in next
+            Upload.send(sessionData);
+            show("screen-end");
+          }
 
           document.querySelectorAll("[data-next-step]").forEach((btn) => {
             btn.onclick = async () => {
@@ -1232,7 +1451,8 @@
           document.getElementById("download-btn").onclick = () => {
             const b = new Blob([JSON.stringify(sessionData, null, 2)], { type: "application/json" });
             const u = URL.createObjectURL(b), a = document.createElement("a"); a.href = u;
-            a.download = `${sessionData.taskType}_${sessionData.participantID}_${new Date().toISOString().slice(0, 10)}.json`;
+            // filename: type_participant_date.json (e.g. paired_P01_2026-04-14.json)
+            a.download = `${sessionData.type}_${sessionData.participantId}_${new Date().toISOString().slice(0, 10)}.json`;
             a.click(); URL.revokeObjectURL(u);
           };
         }
@@ -1241,6 +1461,8 @@
 
     document.addEventListener("DOMContentLoaded", () => {
       App.init();
+      // retry any uploads that failed on a previous launch
+      Upload.retryPending();
       if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(() => {});
     });
   </script>
