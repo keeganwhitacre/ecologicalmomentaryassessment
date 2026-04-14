@@ -4,28 +4,33 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <link rel="manifest" href="manifest.json">
   <title>Interoception Study</title>
   <style>
-    /* --- Clean, Clinical UI Design Tokens --- */
+    /* --- Leica Monochromatic OLED Design Tokens --- */
     :root {
-      --bg: #111827; /* Slate dark */
-      --bg-card: #1f2937;
-      --border: #374151;
-      --fg: #f9fafb;
-      --fg-muted: #9ca3af;
-      --accent-blue: #3b82f6; /* Medical blue for primary actions */
-      --accent-blue-hover: #2563eb;
-      --accent-red: #ef4444; /* Clean red for cardiac elements */
-      --accent-green: #10b981;
-      --accent-yellow: #f59e0b;
-      --radius: 8px; /* Sharper, more professional corners */
-      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      --font-mono: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      --bg: #000000; 
+      --bg-surface: #111111; 
+      --bg-elevated: #1c1c1e;
+      --border: #2c2c2e;
+      --fg: #ffffff; 
+      --fg-muted: #8e8e93; 
+      
+      /* Pure monochromatic accent */
+      --accent: #ffffff; 
+      --accent-hover: #e5e5ea; 
+      
+      --accent-red: #ff453a; 
+      --accent-green: #32d74b;
+      
+      --radius: 14px; 
+      --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Consolas, monospace;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    
     html, body {
       height: 100%; width: 100%;
       font-family: var(--font);
@@ -33,166 +38,136 @@
       color: var(--fg);
       overflow: hidden;
       touch-action: manipulation;
-      -webkit-user-select: none; user-select: none;
+      user-select: none;
+      -webkit-user-select: none;
     }
 
+    /* Fixed Screen Transition Logic */
     .screen {
       position: absolute; inset: 0;
       display: flex; flex-direction: column;
-      padding: calc(env(safe-area-inset-top, 24px) + 16px) 24px calc(env(safe-area-inset-bottom, 24px) + 16px);
+      padding: calc(env(safe-area-inset-top, 24px) + 24px) 24px calc(env(safe-area-inset-bottom, 24px) + 24px);
       opacity: 0; pointer-events: none;
-      transition: opacity 0.3s ease;
+      transition: opacity 0.3s ease-in-out;
       overflow-y: auto;
     }
     .screen.active { opacity: 1; pointer-events: all; }
 
-    h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 8px; color: var(--fg); }
-    h2 { font-size: 1.1rem; font-weight: 400; color: var(--fg-muted); margin-bottom: 24px; }
-    p { font-size: 1rem; line-height: 1.6; color: var(--fg-muted); margin-bottom: 20px; }
-    .label { font-size: 0.8rem; font-weight: 600; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; display: block; }
+    /* Typography */
+    h1 { font-size: 1.75rem; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 8px; color: var(--fg); text-align: center; }
+    h2 { font-size: 1.1rem; font-weight: 400; color: var(--fg-muted); margin-bottom: 32px; letter-spacing: -0.01em; text-align: center; }
+    p { font-size: 1.05rem; line-height: 1.5; color: var(--fg-muted); margin-bottom: 24px; font-weight: 400; text-align: center; }
+    .label { font-size: 0.8rem; font-weight: 600; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; display: block; text-align: center;}
 
-    /* Flat, Professional Buttons */
+    /* Tactile Buttons */
     .btn {
       display: inline-flex; align-items: center; justify-content: center;
-      padding: 14px 24px; border-radius: var(--radius);
+      padding: 18px 28px; border-radius: var(--radius);
       border: none; cursor: pointer;
-      font-family: var(--font); font-size: 1rem; font-weight: 600;
-      transition: background 0.15s ease;
-      -webkit-tap-highlight-color: transparent;
+      font-family: var(--font); font-size: 1.05rem; font-weight: 600; letter-spacing: -0.01em;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    .btn-primary { background: var(--accent-blue); color: #fff; }
-    .btn-primary:active { background: var(--accent-blue-hover); }
-    .btn-primary:disabled { opacity: 0.4; pointer-events: none; }
+    .btn:active { transform: scale(0.97); }
     
-    .btn-outline {
-      background: transparent; color: var(--fg);
+    .btn-primary { 
+      background: var(--accent); color: #000; 
+      box-shadow: 0 4px 14px rgba(255, 255, 255, 0.15);
+    }
+    .btn-primary:active { background: var(--accent-hover); box-shadow: 0 2px 8px rgba(255, 255, 255, 0.2); }
+    .btn-primary:disabled { opacity: 0.3; pointer-events: none; box-shadow: none; background: #333; color: #888; }
+    
+    .btn-secondary {
+      background: var(--bg-surface); color: var(--fg);
       border: 1px solid var(--border);
     }
-    .btn-outline:active { background: var(--bg-card); }
-    .btn-outline.selected { border-color: var(--accent-blue); background: rgba(59, 130, 246, 0.1); color: var(--accent-blue); }
-    .btn-block { width: 100%; }
-    .spacer { flex: 1; min-height: 20px; }
+    .btn-secondary:active { background: var(--bg-elevated); }
+    
+    .btn-block { width: 100%; max-width: 340px; margin-left: auto; margin-right: auto; }
+    .spacer { flex: 1; min-height: 24px; }
 
-    /* ---- Forms & Inputs ---- */
-    .input-group { width: 100%; max-width: 320px; text-align: left; margin-bottom: 24px; }
-    .input-group input, .input-group textarea {
-      width: 100%; padding: 14px;
-      background: var(--bg-card); border: 1px solid var(--border);
+    /* Inputs */
+    .input-group { width: 100%; max-width: 340px; margin: 0 auto 32px; text-align: left; }
+    .input-group input {
+      width: 100%; padding: 18px; text-align: center;
+      background: var(--bg-surface); border: 1px solid var(--border);
       border-radius: var(--radius); color: var(--fg);
-      font-family: var(--font); font-size: 1rem; outline: none;
-      transition: border-color 0.2s;
+      font-family: var(--font); font-size: 1.1rem; outline: none;
+      transition: border-color 0.2s, background 0.2s;
     }
-    .input-group input:focus, .input-group textarea:focus { border-color: var(--accent-blue); }
-    .input-group textarea { resize: none; height: 100px; }
+    .input-group input:focus { border-color: var(--accent); background: var(--bg-elevated); }
 
-    /* ---- Participant ID ---- */
-    #screen-participant { justify-content: center; align-items: center; gap: 16px; text-align: center; }
+    /* ---- EMA Specific Styles (The "One Thing" layout) ---- */
+    #screen-ema { justify-content: space-between; }
+    .ema-progress { font-family: var(--font-mono); font-size: 0.8rem; color: var(--fg-muted); text-align: center; margin-bottom: 24px; letter-spacing: 0.05em; }
     
-    /* ---- Onboarding ---- */
-    #screen-onboarding { justify-content: center; }
-    .onboarding-step { display: none; flex-direction: column; gap: 24px; height: 100%; }
-    .onboarding-step.active { display: flex; }
-    .onboarding-content { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-    
-    .warning-box {
-      background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3);
-      padding: 16px; border-radius: var(--radius); margin-top: 8px;
+    .ema-item-container {
+      flex: 1; display: flex; flex-direction: column; justify-content: center;
+      opacity: 1; transition: opacity 0.3s ease, transform 0.3s ease;
     }
-    .warning-box p { color: #fca5a5; margin-bottom: 0; font-size: 0.95rem; }
-
-    /* ---- EMA Specific Styles ---- */
+    .ema-item-container.fade-out { opacity: 0; transform: translateY(-10px); }
+    .ema-item-container.fade-in { opacity: 0; transform: translateY(10px); }
     
-    .slider-group { width: 100%; margin-bottom: 36px; }
-    .slider-header { display: flex; justify-content: space-between; align-items: baseline; }
-    .slider-val-display { font-family: var(--font-mono); font-size: 0.9rem; font-weight: 600; color: var(--accent-blue); }
+    .ema-question { font-size: 1.5rem; font-weight: 500; color: var(--fg); line-height: 1.3; text-align: center; margin-bottom: 48px; letter-spacing: -0.02em; }
+
+    /* Heavy, tactile slider */
+    .slider-group { width: 100%; max-width: 340px; margin: 0 auto; }
+    .slider-val-display { font-family: var(--font-mono); font-size: 2.5rem; font-weight: 500; color: var(--accent); text-align: center; margin-bottom: 24px; }
     
     .range-slider {
-      -webkit-appearance: none; width: 100%; height: 6px;
-      border-radius: 3px; outline: none; background: var(--border);
-      position: relative; margin-bottom: 12px; margin-top: 12px;
+      -webkit-appearance: none; width: 100%; height: 8px;
+      border-radius: 4px; outline: none; background: var(--bg-elevated);
+      position: relative; margin-bottom: 20px;
     }
     .range-slider::-webkit-slider-thumb {
       -webkit-appearance: none; appearance: none;
-      width: 28px; height: 28px; border-radius: 50%;
-      background: var(--accent-blue);
-      cursor: pointer; border: 2px solid var(--bg);
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--fg);
+      cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,0.5);
     }
-    .slider-labels { display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 500; color: var(--fg-muted); }
+    .slider-labels { display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 500; color: var(--fg-muted); }
 
-    /* Activity Bubbles */
-    .bubble-group { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; margin-bottom: 36px; }
+    /* Tactile choice bubbles */
+    .bubble-group { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 340px; margin: 0 auto; }
     .bubble {
-      padding: 10px 16px; border-radius: 20px; border: 1px solid var(--border);
-      background: var(--bg-card); color: var(--fg); font-size: 0.9rem; font-weight: 500;
-      cursor: pointer; transition: all 0.2s; user-select: none; -webkit-tap-highlight-color: transparent;
+      padding: 18px 20px; border-radius: 14px; border: 1px solid var(--border);
+      background: var(--bg-surface); color: var(--fg); font-size: 1.05rem; font-weight: 500;
+      cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); text-align: center;
     }
-    .bubble.selected { background: var(--accent-blue); border-color: var(--accent-blue); color: #fff; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
-
-    /* ---- Finger overlay ---- */
-    .finger-overlay {
-      position: fixed; inset: 0; z-index: 100;
-      background: rgba(17, 24, 39, 0.95);
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center; gap: 20px;
-      opacity: 0; pointer-events: none;
-      transition: opacity 0.2s ease;
+    .bubble:active { transform: scale(0.98); }
+    .bubble.selected { 
+      background: var(--accent); border-color: var(--accent); color: #000; 
+      box-shadow: 0 4px 14px rgba(255, 255, 255, 0.15); 
     }
-    .finger-overlay.visible { opacity: 1; pointer-events: all; }
 
     /* ---- Baseline ---- */
-    #screen-baseline { justify-content: space-between; align-items: center; gap: 16px; }
-    .baseline-top { text-align: center; }
-
-    .baseline-feedback {
-      display: flex; align-items: center; gap: 32px;
-      justify-content: center; width: 100%;
-      background: var(--bg-card); padding: 24px;
-      border-radius: var(--radius); border: 1px solid var(--border);
-    }
-    .baseline-bpm-box { text-align: center; }
-    .baseline-bpm-number { font-size: 3rem; font-weight: 500; font-family: var(--font-mono); color: var(--accent-red); line-height: 1; }
-
+    #screen-baseline { align-items: center; justify-content: center; gap: 40px; }
+    
     .progress-ring {
-      width: 100px; height: 100px; position: relative; flex-shrink: 0;
+      width: 180px; height: 180px; position: relative;
       display: flex; align-items: center; justify-content: center;
+      margin: 0 auto;
     }
-    .progress-ring svg { position: absolute; inset: 0; transform: rotate(-90deg); z-index: 2; }
-    .progress-ring circle { fill: none; stroke-width: 6; }
-    .progress-ring .track { stroke: var(--border); }
+    .progress-ring svg { position: absolute; inset: 0; transform: rotate(-90deg); z-index: 2; width: 100%; height: 100%; }
+    .progress-ring circle { fill: none; stroke-width: 3; }
+    .progress-ring .track { stroke: var(--bg-elevated); }
     .progress-ring .fill {
-      stroke: var(--accent-blue); stroke-dasharray: 283; stroke-dashoffset: 283;
+      stroke: var(--accent); stroke-dasharray: 534; stroke-dashoffset: 534;
       stroke-linecap: round; transition: stroke-dashoffset 1s linear;
     }
-    .progress-text { font-size: 1.1rem; font-weight: 500; font-family: var(--font-mono); z-index: 3; color: var(--fg); }
+    
+    .baseline-bpm-box { text-align: center; z-index: 3; }
+    .baseline-bpm-number { font-size: 3.8rem; font-weight: 500; font-family: var(--font-mono); color: var(--fg); line-height: 1; letter-spacing: -0.04em; }
+    .baseline-bpm-label { font-size: 0.8rem; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 4px; }
 
-    .camera-preview { position: absolute; width: 80px; height: 80px; border-radius: 50%; z-index: 1; object-fit: cover; opacity: 0.5; }
-
-    .wave-container {
-      width: 100%; height: 80px;
-      background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: var(--radius); overflow: hidden; position: relative;
-    }
-    #wave-canvas { width: 100%; height: 100%; display: block; }
-
-    .baseline-stats {
-      display: flex; justify-content: space-around; width: 100%;
-      background: var(--bg-card); padding: 16px; border-radius: var(--radius); border: 1px solid var(--border);
-    }
-    .baseline-stat { text-align: center; }
-    .baseline-stat-value { font-family: var(--font-mono); font-size: 1.2rem; color: var(--fg); margin-top: 4px; }
-    .baseline-status { font-size: 0.85rem; color: var(--fg-muted); text-align: center; min-height: 1.2em; transition: color 0.3s; }
-
-    /* ---- Trial (Clean Dial) ---- */
-    #screen-trial { align-items: center; justify-content: space-between; }
-    .trial-header { text-align: center; margin-bottom: 8px;}
-    .trial-instruction { font-size: 1rem; color: var(--fg-muted); text-align: center; max-width: 320px; line-height: 1.5; margin-bottom: 20px; }
+    /* ---- PAT Trial (Physical Dial) ---- */
+    #screen-trial { align-items: center; justify-content: center; }
+    .trial-header { text-align: center; position: absolute; top: calc(env(safe-area-inset-top, 24px) + 24px); width: 100%; }
+    .trial-instruction { font-size: 1.1rem; color: var(--fg-muted); text-align: center; max-width: 300px; line-height: 1.4; margin-bottom: 40px; font-weight: 400; }
 
     .rotary-dial-wrapper {
-      position: relative; width: 260px; height: 260px; margin: 16px auto 24px;
+      position: relative; width: 280px; height: 280px; margin: 0 auto 40px;
       display: flex; align-items: center; justify-content: center;
       border-radius: 50%;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
       user-select: none;
     }
     
@@ -200,66 +175,80 @@
     .dial-tick {
       position: absolute; width: 2px; height: 6px;
       background: var(--border);
-      top: 8px; left: 50%; transform-origin: 50% 122px;
-      margin-left: -1px;
+      top: 8px; left: 50%; transform-origin: 50% 132px;
+      margin-left: -1px; transition: background 0.2s;
     }
 
+    /* Endless, tactile knob styling */
     .rotary-dial {
-      width: 150px; height: 150px; border-radius: 50%;
-      background: var(--bg);
-      border: 2px solid var(--border);
+      width: 160px; height: 160px; border-radius: 50%;
+      background: linear-gradient(145deg, #1f1f23, #121214);
+      box-shadow: 
+        8px 8px 16px rgba(0,0,0,0.8), 
+        -4px -4px 12px rgba(255,255,255,0.03),
+        inset 0 2px 4px rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
       position: relative; touch-action: none; cursor: grab;
       z-index: 2; display: flex; align-items: center; justify-content: center;
     }
-    .rotary-dial:active { cursor: grabbing; background: #18202f; }
+    .rotary-dial:active { cursor: grabbing; background: linear-gradient(145deg, #1a1a1d, #0f0f11); }
     
     .rotary-dial-indicator {
-      position: absolute; top: 8px; left: 50%;
-      width: 4px; height: 20px; background: var(--accent-blue);
+      position: absolute; top: 12px; left: 50%;
+      width: 4px; height: 24px; background: var(--accent);
       border-radius: 2px; transform: translateX(-50%);
+      box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
     }
 
     .dial-labels {
       display: flex; justify-content: space-between; width: 100%; max-width: 280px;
-      margin: 0 auto 24px; font-size: 0.8rem; font-weight: 600; color: var(--fg-muted);
-      text-transform: uppercase; letter-spacing: 0.05em;
+      margin: 0 auto; font-size: 0.85rem; font-weight: 600; color: var(--fg-muted);
+      text-transform: uppercase; letter-spacing: 0.08em;
     }
-
-    .sqi-warning-dot {
-      width: 14px; height: 14px; border-radius: 50%;
-      background: var(--accent-red);
-      margin-bottom: 20px;
-      opacity: 0; transition: opacity 0.4s ease;
-      pointer-events: none;
-      box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
-    }
-    .sqi-warning-dot.visible { opacity: 1; }
 
     .movement-warning {
-      position: fixed; top: calc(env(safe-area-inset-top, 24px) + 10px);
-      left: 50%; transform: translateX(-50%) translateY(-60px);
-      background: var(--accent-red); color: #fff;
-      padding: 8px 20px; border-radius: var(--radius);
-      font-size: 0.9rem; font-weight: 600;
+      position: fixed; top: calc(env(safe-area-inset-top, 24px) + 16px);
+      left: 50%; transform: translateX(-50%) translateY(-20px);
+      background: var(--bg-elevated); border: 1px solid var(--border); color: var(--fg);
+      padding: 10px 20px; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      font-size: 0.9rem; font-weight: 500;
       z-index: 50; pointer-events: none;
       opacity: 0; transition: all 0.3s ease;
     }
     .movement-warning.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+    /* ---- Unified Sensor Warning Overlay ---- */
+    .sensor-warning-overlay {
+      position: fixed; inset: 0; z-index: 100;
+      background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+    }
+    .sensor-warning-overlay.visible { opacity: 1; pointer-events: all; }
+
+    .sensor-preview-circle {
+      width: 120px; height: 120px; border-radius: 50%;
+      background: #000; border: 3px solid var(--fg);
+      object-fit: cover; box-shadow: none;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+      margin-bottom: 24px;
+    }
+    .sensor-warning-text {
+      text-align: center; font-size: 1.1rem; color: var(--fg); font-weight: 500; line-height: 1.4;
+    }
+
     /* ---- Body map ---- */
-    #screen-bodymap { justify-content: center; align-items: center; gap: 16px; }
-    .body-map-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; max-width: 320px; }
+    .body-map-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; max-width: 340px; margin: 0 auto; }
     .body-part {
-      padding: 14px; border-radius: var(--radius);
-      background: var(--bg-card); border: 1px solid var(--border);
-      color: var(--fg); font-size: 0.95rem; cursor: pointer; text-align: center;
+      padding: 16px; border-radius: 12px;
+      background: var(--bg-surface); border: 1px solid var(--border);
+      color: var(--fg); font-size: 1rem; cursor: pointer; text-align: center; font-weight: 500;
+      transition: all 0.2s;
     }
-    
-    /* ---- Hidden camera ---- */
-    #video-feed, #sampling-canvas {
-      position: fixed; top: -9999px; left: -9999px;
-      width: 40px; height: 40px; opacity: 0; pointer-events: none;
-    }
+    .body-part.selected { background: var(--accent); border-color: var(--accent); color: #000; }
+
+    /* ---- Hidden elements ---- */
+    #video-feed, #sampling-canvas { position: fixed; top: -9999px; left: -9999px; width: 40px; height: 40px; opacity: 0; pointer-events: none; }
   </style>
 </head>
 <body>
@@ -267,265 +256,144 @@
   <video id="video-feed" playsinline muted></video>
   <canvas id="sampling-canvas"></canvas>
 
+  <!-- Unified Sensor Overlay (Replaces Trial/Baseline specific overlays) -->
+  <div class="sensor-warning-overlay" id="sensor-warning-overlay">
+    <canvas id="sensor-preview-circle" class="sensor-preview-circle"></canvas>
+    <div class="sensor-warning-text" id="sensor-warning-text">Place finger on camera</div>
+  </div>
+
   <!-- 1. Participant ID -->
   <div class="screen active" id="screen-participant">
-    <div style="margin-bottom: 16px;">
-      <!-- Clean Medical Cross/Heart Icon -->
-      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent-blue)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 24px;">
         <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
       </svg>
-    </div>
-    <div style="margin-bottom: 24px;">
       <h1>Interoception Study</h1>
       <h2 id="task-subtitle">Phase Adjustment Task</h2>
+      
+      <div class="input-group" style="margin-top: 24px;">
+        <label class="label" for="participant-input">Participant ID</label>
+        <input type="text" id="participant-input" placeholder="e.g. 42" autocomplete="off">
+      </div>
     </div>
-    <div class="input-group">
-      <label class="label" for="participant-input">Participant ID</label>
-      <input type="text" id="participant-input" placeholder="e.g. 42" autocomplete="off">
-    </div>
-    <button class="btn btn-primary btn-block" id="start-btn" style="max-width:320px;">Begin</button>
+    <button class="btn btn-primary btn-block" id="start-btn">Begin Session</button>
   </div>
-
-  <!-- ========================================== -->
-  <!-- PATH A: ECOLOGICAL MOMENTARY ASSESSMENT    -->
-  <!-- ========================================== -->
-  <!-- ========================================== -->
-  <!-- PATH A: EMA (rendered from data by EMA module) -->
-  <!-- ========================================== -->
-  <div class="screen" id="screen-ema">
-    <h1 id="ema-title" style="text-align: center; margin-bottom: 24px; margin-top: 16px;">Check-In</h1>
-    <div id="ema-items-container" style="width: 100%; max-width: 340px; margin: 0 auto;"></div>
-    <div class="spacer"></div>
-    <button class="btn btn-primary btn-block" id="submit-ema-btn" style="max-width:340px; margin: 0 auto;">Submit Check-In</button>
-  </div>
-
-  <!-- ========================================== -->
-  <!-- PATH B: PHASE ADJUSTMENT TASK              -->
-  <!-- ========================================== -->
 
   <!-- 2. Onboarding -->
   <div class="screen" id="screen-onboarding">
-    <div class="onboarding-step" data-step="1">
-      <div class="onboarding-content">
-        <h1>Audio Setup</h1>
-        <p>This task requires precision timing to match a sound with your heartbeat.</p>
-        <div class="warning-box">
-          <p><strong>⚠️ Do not use Bluetooth headphones.</strong></p>
-          <p style="color: var(--fg-muted);">Wireless headphones introduce an audio delay that invalidates the data.</p>
-        </div>
-        <p style="margin-top: 16px;">Please use <strong>wired earphones</strong> or the <strong>built-in device speaker</strong> in a quiet room.</p>
-      </div>
-      <button class="btn btn-primary btn-block" data-next-step="audio-check">I'm using wired/built-in audio</button>
+    <div class="ema-item-container" id="onboarding-container">
+      <!-- Content injected by JS -->
     </div>
-
-    <div class="onboarding-step" data-step="audio-check">
-      <div class="onboarding-content">
-        <h1>Sound Check</h1>
-        <p>Before we begin, we need to make sure you can hear the task tones.</p>
-        <div class="warning-box">
-          <p><strong>📱 iPhone users:</strong> Make sure the <strong>silent switch</strong> on the side of your phone is <strong>OFF</strong> (no orange showing).</p>
-          <p style="color: var(--fg-muted);">Also turn your volume up to a comfortable level.</p>
-        </div>
-        <p style="margin-top: 16px;">Tap the button below to play a test tone:</p>
-        <button class="btn btn-secondary btn-block" id="audio-test-btn" style="margin-top: 12px;">🔊 Play Test Tone</button>
-        <p id="audio-test-status" style="text-align: center; color: var(--fg-muted); min-height: 1.2em; margin-top: 12px;"></p>
-      </div>
-      <div id="audio-test-confirm" style="display:none;">
-        <p style="text-align: center; margin-bottom: 12px;">Did you hear the tone clearly?</p>
-        <div style="display: flex; gap: 12px;">
-          <button class="btn btn-secondary" id="audio-test-no" style="flex: 1;">No</button>
-          <button class="btn btn-primary" data-next-step="2" style="flex: 1;">Yes, continue</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="onboarding-step" data-step="2">
-      <div class="onboarding-content">
-        <h1>Sensor Preparation</h1>
-        <p>Place the tip of your index finger gently over both the <strong>rear camera lens</strong> and the <strong>flashlight</strong>.</p>
-        <p>Keep your finger perfectly still. We are measuring your pulse optically, so movement will disrupt the reading.</p>
-      </div>
-      <button class="btn btn-primary btn-block" data-next-step="baseline">Start Calibration</button>
-    </div>
-
-    <div class="onboarding-step" data-step="post-baseline">
-      <div class="onboarding-content">
-        <h1>Calibration Complete</h1>
-        <p>In the main task, you will hear a series of tones. Each tone represents one of your heartbeats, but the timing may be shifted.</p>
-        <p>Rotate the dial until the tone feels perfectly <strong>in sync</strong> with your actual heartbeat.</p>
-      </div>
-      <button class="btn btn-primary btn-block" data-next-step="3">Continue</button>
-    </div>
-
-    <div class="onboarding-step" data-step="3">
-      <div class="onboarding-content">
-        <h1>Task Instructions</h1>
-        <p>Do <strong>not</strong> actively try to feel your pulse with your other hand. We want to measure your internal perception.</p>
-        <p>Keep your finger steadily on the camera throughout the task.</p>
-        <p>You will start with 2 practice trials.</p>
-      </div>
-      <button class="btn btn-primary btn-block" data-next-step="start-trials">Begin Practice</button>
+    <div style="margin-top: 32px;">
+      <button class="btn btn-primary btn-block" id="onboarding-next-btn">Continue</button>
     </div>
   </div>
 
-  <!-- 3. Baseline -->
+  <!-- 3. EMA -->
+  <div class="screen" id="screen-ema">
+    <div class="ema-progress" id="ema-progress-text">1 OF 5</div>
+    <div class="ema-item-container" id="ema-single-container">
+      <!-- Injected by JS -->
+    </div>
+    <div style="margin-top: 40px;">
+      <button class="btn btn-primary btn-block" id="ema-next-btn" disabled>Next</button>
+    </div>
+  </div>
+
+  <!-- 4. Baseline -->
   <div class="screen" id="screen-baseline">
-    <div class="finger-overlay" id="baseline-finger-overlay">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--fg)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="5" y="2" width="14" height="20" rx="4" ry="4"/>
-        <circle cx="12" cy="8" r="2" fill="var(--accent-red)" stroke="none"/> 
-      </svg>
-      <p style="text-align: center; color: #fff;">Please place finger on camera<br><span style="font-size: 0.9rem; color: var(--fg-muted);">Cover both lens and flash</span></p>
-    </div>
-
-    <div class="baseline-top">
-      <h1>Recording Baseline</h1>
-      <p class="label">Keep finger still</p>
-    </div>
-
-    <div class="baseline-feedback">
-      <div class="baseline-bpm-box">
-        <div class="baseline-bpm-number" id="baseline-heart">
-          <span id="baseline-bpm">--</span>
-        </div>
-        <div class="label" style="margin-top:8px;">BPM</div>
+    <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
+      <div style="margin-bottom: 40px;">
+        <h1>Calibration</h1>
+        <p class="label">Keep your finger completely still</p>
       </div>
 
       <div class="progress-ring">
-        <canvas id="camera-preview" class="camera-preview"></canvas>
-        <svg viewBox="0 0 100 100">
-          <circle class="track" cx="50" cy="50" r="45"/>
-          <circle class="fill" id="baseline-progress-circle" cx="50" cy="50" r="45"/>
+        <svg viewBox="0 0 180 180">
+          <circle class="track" cx="90" cy="90" r="85"/>
+          <circle class="fill" id="baseline-progress-circle" cx="90" cy="90" r="85"/>
         </svg>
-        <span class="progress-text" id="baseline-progress">0%</span>
+        <div class="baseline-bpm-box">
+          <div class="baseline-bpm-number" id="baseline-bpm">--</div>
+          <div class="baseline-bpm-label">BPM</div>
+        </div>
       </div>
     </div>
-
-    <div class="wave-container">
-      <canvas id="wave-canvas"></canvas>
-    </div>
-
-    <div class="baseline-stats">
-      <div class="baseline-stat">
-        <div class="label">Time Left</div>
-        <div class="baseline-stat-value"><span id="baseline-secs">120</span>s</div>
-      </div>
-      <div class="baseline-stat">
-        <div class="label">Beats</div>
-        <div class="baseline-stat-value" id="baseline-beat-count">0</div>
-      </div>
-    </div>
-
-    <p class="baseline-status" id="baseline-status">Awaiting contact...</p>
   </div>
 
-  <!-- 4. Trial -->
+  <!-- 5. Trial -->
   <div class="screen" id="screen-trial">
-    <div class="finger-overlay" id="trial-finger-overlay">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--fg)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="5" y="2" width="14" height="20" rx="4" ry="4"/>
-        <circle cx="12" cy="8" r="2" fill="var(--accent-red)" stroke="none"/> 
-      </svg>
-      <p style="text-align: center; color: #fff;">Please place finger back on camera.</p>
-    </div>
-
     <div class="movement-warning" id="trial-movement-warning">
-      Movement detected — keep still
+      Keep still
     </div>
 
     <div class="trial-header">
-      <p class="label" id="trial-label" style="color: var(--accent-blue);">Trial 1</p>
+      <p class="label" id="trial-label" style="color: var(--fg-muted);">Trial 1</p>
     </div>
 
-    <p class="trial-instruction">
-      Rotate the dial until the sound aligns with your heartbeat.
-    </p>
+    <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; width: 100%;">
+      <p class="trial-instruction">Rotate the dial until the tone precisely aligns with your heartbeat.</p>
 
-    <div class="rotary-dial-wrapper">
-      <div class="rotary-dial-ticks" id="rotary-dial-ticks"></div>
-      <div class="rotary-dial" id="rotary-dial">
-        <div class="rotary-dial-indicator"></div>
+      <div class="rotary-dial-wrapper">
+        <div class="rotary-dial-ticks" id="rotary-dial-ticks"></div>
+        <div class="rotary-dial" id="rotary-dial">
+          <div class="rotary-dial-indicator"></div>
+        </div>
+      </div>
+      
+      <div class="dial-labels">
+        <span>◀ Earlier</span>
+        <span>Later ▶</span>
       </div>
     </div>
-    
-    <div class="dial-labels">
-      <span>◀ Earlier</span>
-      <span>Later ▶</span>
-    </div>
 
-    <!-- Passive SQI indicator: appears only when signal quality degrades -->
-    <div class="sqi-warning-dot" id="trial-sqi-dot" aria-hidden="true"></div>
-
-    <button class="btn btn-primary btn-block" id="confirm-trial-btn" disabled style="max-width:320px;">
+    <button class="btn btn-primary btn-block" id="confirm-trial-btn" disabled style="margin-top: 40px;">
       Confirm Timing
-    </button>
-  </div>
-
-  <!-- 5. Confidence -->
-  <div class="screen" id="screen-confidence">
-    <div class="spacer"></div>
-    <h1 style="text-align:center;">Confidence Rating</h1>
-    <p style="text-align:center; color:var(--fg-muted);">
-      How confident are you that the sound matched your heartbeat?
-    </p>
-    
-    <div class="slider-group" style="margin: 32px auto;">
-      <div style="font-size: 3rem; font-weight: 500; font-family: var(--font-mono); color: var(--accent-blue); text-align: center; margin-bottom: 16px;" id="confidence-value">5</div>
-      <input type="range" class="range-slider" id="confidence-slider" min="0" max="9" step="1" value="5">
-      <div class="slider-labels">
-        <span>Guessing</span>
-        <span>Certain</span>
-      </div>
-    </div>
-
-    <div class="spacer"></div>
-    <button class="btn btn-primary btn-block" id="confirm-confidence-btn" disabled style="max-width:320px; margin:0 auto;">
-      Submit
     </button>
   </div>
 
   <!-- 6. Body map -->
   <div class="screen" id="screen-bodymap">
-    <div class="spacer"></div>
-    <h1 style="text-align:center;">Sensation Location</h1>
-    <p style="text-align:center; color:var(--fg-muted); margin-bottom: 24px;">
-      Where did you primarily feel your heartbeat?
-    </p>
-    <button class="btn btn-outline btn-block" id="nowhere-btn" style="max-width:320px; margin:0 auto 16px;">Did not feel it</button>
-    <div class="body-map-grid" style="margin:0 auto;">
-      <div class="body-part" data-value="1" data-name="Chest">Chest</div>
-      <div class="body-part" data-value="2" data-name="Fingers">Fingers</div>
-      <div class="body-part" data-value="3" data-name="Neck">Neck</div>
-      <div class="body-part" data-value="4" data-name="Ears">Ears</div>
-      <div class="body-part" data-value="5" data-name="Abdomen">Abdomen</div>
-      <div class="body-part" data-value="6" data-name="Legs">Legs</div>
-      <div class="body-part" data-value="7" data-name="Head">Head</div>
+    <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
+      <h1>Sensation</h1>
+      <p>Where did you primarily feel your heartbeat?</p>
+      
+      <button class="btn btn-secondary btn-block" id="nowhere-btn" style="margin-bottom: 16px; border-radius: 12px; font-weight: 500;">Did not feel it</button>
+      
+      <div class="body-map-grid">
+        <div class="body-part" data-value="1" data-name="Chest">Chest</div>
+        <div class="body-part" data-value="2" data-name="Fingers">Fingers</div>
+        <div class="body-part" data-value="3" data-name="Neck">Neck</div>
+        <div class="body-part" data-value="4" data-name="Ears">Ears</div>
+        <div class="body-part" data-value="5" data-name="Abdomen">Abdomen</div>
+        <div class="body-part" data-value="6" data-name="Legs">Legs</div>
+        <div class="body-part" data-value="7" data-name="Head">Head</div>
+      </div>
     </div>
-    <p id="bodymap-selected" style="text-align:center; margin-top: 16px; font-weight: 500; color: var(--accent-blue); min-height: 1.2em;"></p>
-    <div class="spacer"></div>
-    <button class="btn btn-primary btn-block" id="confirm-bodymap-btn" disabled style="max-width:320px; margin:0 auto;">Confirm Location</button>
+    
+    <button class="btn btn-primary btn-block" id="confirm-bodymap-btn" disabled style="margin-top: 32px;">Confirm Location</button>
   </div>
 
   <!-- 7. End -->
   <div class="screen" id="screen-end">
-    <div class="spacer"></div>
-    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--accent-blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto 24px;">
-      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-      <polyline points="22 4 12 14.01 9 11.01"/>
-    </svg>
-    <h1 style="text-align:center;">Task Complete</h1>
-    <p style="text-align:center;">Thank you for your participation.</p>
-    <div class="spacer"></div>
-    <button class="btn btn-primary btn-block" id="download-btn" style="max-width:320px; margin: 0 auto;">
-      Save Data
-    </button>
+    <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 24px;">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+        <polyline points="22 4 12 14.01 9 11.01"/>
+      </svg>
+      <h1>Session Complete</h1>
+      <p>Thank you for your participation.</p>
+    </div>
+    <button class="btn btn-secondary btn-block" id="download-btn">Save Local Copy</button>
   </div>
 
   <script src="epat-core.js"></script>
   <script>
     "use strict";
 
-    // Build Dial Ticks dynamically
+    // ============================================================
+    // UI INITIALIZATION
+    // ============================================================
     (function generateTicks() {
       const container = document.getElementById('rotary-dial-ticks');
       if (!container) return;
@@ -542,317 +410,208 @@
       }
     })();
 
-    // ============================================================
-    // CORE MODULES — loaded from epat-core.js
-    // ============================================================
+    // Core Modules
     const WakeLockCtrl   = window.ePATCore.WakeLockCtrl;
     const WabpDetector   = window.ePATCore.WabpDetector;
     const BeatDetector   = window.ePATCore.BeatDetector;
     const AudioEngine    = window.ePATCore.AudioEngine;
     const MotionDetector = window.ePATCore.MotionDetector;
 
-
     // ============================================================
     // UPLOAD MODULE
-    // ------------------------------------------------------------
-    // posts the completed session descriptor to a backend.
-    //
-    // current backend: cloudflare worker → private github repo.
-    // future backend: qualtrics (or other osu-approved). to migrate,
-    // change UPLOAD_CONFIG.endpoint — the POST body shape stays the same.
-    //
-    // failure model:
-    //   1. save to localStorage before trying to post (survives refresh)
-    //   2. attempt POST
-    //   3. on success: remove from localStorage
-    //   4. on failure: leave in localStorage, retry on next launch
-    //   5. manual download button remains as a third-layer escape valve
     // ============================================================
-    const UPLOAD_CONFIG = {
-      // TODO replace with your cloudflare worker url after deploying
-      endpoint: "epat-upload.keeganwhitacre.workers.dev",
-      enabled: true,  // flip to true once endpoint is live
-    };
-
+    const UPLOAD_CONFIG = { endpoint: "epat-upload.keeganwhitacre.workers.dev", enabled: true };
     const Upload = (function () {
       const PENDING_KEY = "epat_pending_uploads";
-
-      function loadPending() {
-        try { return JSON.parse(localStorage.getItem(PENDING_KEY) || "{}"); }
-        catch (e) { return {}; }
-      }
-      function savePending(obj) {
-        try { localStorage.setItem(PENDING_KEY, JSON.stringify(obj)); } catch (e) {}
-      }
-      function stashLocally(session) {
-        const pending = loadPending();
-        pending[session.sessionId] = session;
-        savePending(pending);
-      }
-      function clearLocal(sessionId) {
-        const pending = loadPending();
-        delete pending[sessionId];
-        savePending(pending);
-      }
-
+      function loadPending() { try { return JSON.parse(localStorage.getItem(PENDING_KEY) || "{}"); } catch (e) { return {}; } }
+      function savePending(obj) { try { localStorage.setItem(PENDING_KEY, JSON.stringify(obj)); } catch (e) {} }
+      function stashLocally(session) { const p = loadPending(); p[session.sessionId] = session; savePending(p); }
+      function clearLocal(sessionId) { const p = loadPending(); delete p[sessionId]; savePending(p); }
       async function postOne(session) {
-        if (!UPLOAD_CONFIG.enabled) {
-          // upload disabled — leave in localStorage as a breadcrumb
-          return { ok: false, reason: "upload_disabled" };
-        }
+        if (!UPLOAD_CONFIG.enabled) return { ok: false, reason: "upload_disabled" };
         try {
-          const res = await fetch(UPLOAD_CONFIG.endpoint, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(session),
-          });
+          const res = await fetch(UPLOAD_CONFIG.endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(session) });
           if (!res.ok) return { ok: false, reason: "http_" + res.status };
           return { ok: true };
-        } catch (e) {
-          return { ok: false, reason: "network_" + (e.message || "unknown") };
-        }
+        } catch (e) { return { ok: false, reason: "network_" + (e.message || "unknown") }; }
       }
-
       return {
-        // called when a session finalizes. stashes locally, tries to post,
-        // clears the stash on success. failures just leave the session in
-        // localStorage for the next launch to retry.
-        async send(session) {
-          stashLocally(session);
-          const result = await postOne(session);
-          if (result.ok) clearLocal(session.sessionId);
-          return result;
-        },
-
-        // called at app init — retries any sessions stuck in localStorage
-        // from a previous page load where upload failed.
-        async retryPending() {
-          if (!UPLOAD_CONFIG.enabled) return;
-          const pending = loadPending();
-          const ids = Object.keys(pending);
-          for (const id of ids) {
-            const result = await postOne(pending[id]);
-            if (result.ok) clearLocal(id);
-          }
-        },
-
-        pendingCount() { return Object.keys(loadPending()).length; },
+        async send(session) { stashLocally(session); const result = await postOne(session); if (result.ok) clearLocal(session.sessionId); return result; },
+        async retryPending() { if (!UPLOAD_CONFIG.enabled) return; const p = loadPending(); for (const id of Object.keys(p)) { const r = await postOne(p[id]); if (r.ok) clearLocal(id); } }
       };
     })();
 
     // ============================================================
-    // DROPOUT HANDLER
-    // ------------------------------------------------------------
-    // discard policy: if the participant closes the tab mid-session,
-    // the session is thrown away. no partial saves.
-    // this matches the agreed pilot policy — simpler to analyze,
-    // and short sessions make a restart cheap for participants.
-    //
-    // implementation: the session is only uploaded in finalizeSession().
-    // if beforeunload fires before that, nothing gets sent. the only
-    // remaining concern is localStorage stash — which only happens
-    // *inside* Upload.send(), which is only called by finalizeSession().
-    // so mid-session closes leave zero trace. exactly what we want.
-    // ============================================================
-    window.addEventListener("beforeunload", () => {
-      if (sessionData && sessionData.status === "in_progress") {
-        // nothing to do — we deliberately do not stash. discard.
-      }
-    });
-
-    // ============================================================
     // EMA MODULE
-    // items are data, not code. add/remove/reword by editing EMA_ITEMS.
-    // render(sessionType) builds the screen. collectResponses() grabs values.
     // ============================================================
     const EMA = (function () {
-
-      // ---- scale helpers ----
-      // slider: 0–10 likert (most items) or custom range (sleep hours)
-      // choice: discrete single-select buttons
       const ITEM = {
-        slider: (id, label, leftAnchor, rightAnchor, opts = {}) => ({
-          type: "slider", id, label, leftAnchor, rightAnchor,
-          min: opts.min ?? 0, max: opts.max ?? 10, step: opts.step ?? 1,
-          defaultVal: opts.defaultVal ?? 5, unit: opts.unit ?? "",
-        }),
-        choice: (id, label, options) => ({
-          type: "choice", id, label, options,
-        }),
+        slider: (id, label, leftAnchor, rightAnchor, opts = {}) => ({ type: "slider", id, label, leftAnchor, rightAnchor, min: opts.min ?? 0, max: opts.max ?? 10, step: opts.step ?? 1, defaultVal: opts.defaultVal ?? 5, unit: opts.unit ?? "" }),
+        choice: (id, label, options) => ({ type: "choice", id, label, options }),
       };
 
-      // ---- item definitions ----
-      // common block runs on every ema session.
-      // morning block gets prepended when session is morning.
-      //
-      // maia items are state-adapted ("right now") from the trait wordings.
-      // noticing + emotional awareness are the two subscales we're tracking.
-      // cite mehling state-maia adaptation in methods.
       const EMA_ITEMS = {
-
         morning: [
-          ITEM.slider("sleep_hours",  "How many hours did you sleep last night?",
-                      "0 hrs", "12+ hrs",
-                      { min: 0, max: 12, step: 0.5, defaultVal: 7, unit: " hrs" }),
-          ITEM.slider("sleep_quality", "How would you rate the quality of your sleep?",
-                      "very poor", "very good"),
-          ITEM.slider("restfulness",   "How rested do you feel right now?",
-                      "not rested at all", "fully rested"),
+          ITEM.slider("sleep_hours",  "How many hours did you sleep last night?", "0", "12+", { min: 0, max: 12, step: 0.5, defaultVal: 7, unit: " hrs" }),
+          ITEM.slider("sleep_quality", "How would you rate the quality of your sleep?", "Poor", "Good"),
+          ITEM.slider("restfulness",   "How rested do you feel right now?", "Not rested", "Fully rested"),
         ],
-
         common: [
-          // affect core
-          ITEM.slider("valence", "Right now, my mood is…",
-                      "very unpleasant", "very pleasant"),
-          ITEM.slider("arousal", "Right now, my energy level is…",
-                      "very low / calm", "very high / activated"),
-
-          // maia — noticing
-          ITEM.slider("maia_noticing", "Right now, I am aware of sensations in my body.",
-                      "not at all", "very much"),
-
-          // maia — emotional awareness
-          ITEM.slider("maia_emoawareness", "Right now, I notice how my body feels when I'm having an emotion.",
-                      "not at all", "very much"),
-
-          // context
-          ITEM.choice("ctx_activity", "What are you doing right now?",
-            ["resting", "working/studying", "socializing", "exercising", "eating", "commuting", "other"]),
-          ITEM.choice("ctx_social", "Who are you with?",
-            ["alone", "with 1 person", "small group", "in a crowd"]),
-          ITEM.choice("ctx_location", "Where are you?",
-            ["home", "work/school", "outside", "in transit", "other"]),
+          ITEM.slider("valence", "Right now, my mood is…", "Unpleasant", "Pleasant"),
+          ITEM.slider("arousal", "Right now, my energy level is…", "Low / Calm", "High / Activated"),
+          ITEM.slider("maia_noticing", "Right now, I am aware of sensations in my body.", "Not at all", "Very much"),
+          ITEM.slider("maia_emoawareness", "Right now, I notice how my body feels when I'm having an emotion.", "Not at all", "Very much"),
+          ITEM.choice("ctx_activity", "What are you doing right now?", ["Resting", "Working / Studying", "Socializing", "Exercising", "Eating", "Commuting", "Other"]),
+          ITEM.choice("ctx_social", "Who are you with?", ["Alone", "With 1 person", "Small group", "In a crowd"]),
+          ITEM.choice("ctx_location", "Where are you?", ["Home", "Work / School", "Outside", "In transit", "Other"]),
         ],
       };
 
-      // ---- render helpers ----
-      function buildSlider(item) {
-        const wrap = document.createElement("div");
-        wrap.className = "slider-group";
-        wrap.dataset.itemId = item.id;
-        wrap.dataset.itemType = "slider";
+      let activeItems = [];
+      let currentIndex = 0;
+      let sessionResponses = {};
+      const container = document.getElementById("ema-single-container");
+      const nextBtn = document.getElementById("ema-next-btn");
+      const progressText = document.getElementById("ema-progress-text");
 
-        const header = document.createElement("div");
-        header.className = "slider-header";
-        const labelEl = document.createElement("label");
-        labelEl.className = "label";
-        labelEl.textContent = item.label;
-        const valEl = document.createElement("span");
-        valEl.className = "slider-val-display";
-        valEl.textContent = item.defaultVal + item.unit;
-        header.appendChild(labelEl); header.appendChild(valEl);
-
-        const input = document.createElement("input");
-        input.type = "range"; input.className = "range-slider";
-        input.min = item.min; input.max = item.max; input.step = item.step;
-        input.value = item.defaultVal;
-        input.dataset.fieldId = item.id;
-        input.addEventListener("input", () => { valEl.textContent = input.value + item.unit; });
-
-        const anchors = document.createElement("div");
-        anchors.className = "slider-labels";
-        const l = document.createElement("span"); l.textContent = item.leftAnchor;
-        const r = document.createElement("span"); r.textContent = item.rightAnchor;
-        anchors.appendChild(l); anchors.appendChild(r);
-
-        wrap.appendChild(header); wrap.appendChild(input); wrap.appendChild(anchors);
-        return wrap;
-      }
-
-      function buildChoice(item) {
-        // scoped wrapper — each choice group tracks its own selection
-        const wrap = document.createElement("div");
-        wrap.style.marginBottom = "24px";
-        wrap.dataset.itemId = item.id;
-        wrap.dataset.itemType = "choice";
-
-        const labelEl = document.createElement("label");
-        labelEl.className = "label";
-        labelEl.textContent = item.label;
-        wrap.appendChild(labelEl);
-
-        const group = document.createElement("div");
-        group.className = "bubble-group";
-        group.style.marginBottom = "8px";
-
-        item.options.forEach(opt => {
-          const b = document.createElement("div");
-          b.className = "bubble";
-          b.dataset.val = opt;
-          b.textContent = opt;
-          b.onclick = () => {
-            // scope the deselect to this group only — not every bubble on screen
-            group.querySelectorAll(".bubble").forEach(ob => ob.classList.remove("selected"));
-            b.classList.add("selected");
-            wrap.dataset.selectedVal = opt;
-          };
-          group.appendChild(b);
-        });
-
-        wrap.appendChild(group);
-        return wrap;
-      }
-
-      // ---- public api ----
-      function render(sessionType) {
-        const container = document.getElementById("ema-items-container");
+      function renderCurrentItem() {
         container.innerHTML = "";
+        const item = activeItems[currentIndex];
+        progressText.textContent = `${currentIndex + 1} OF ${activeItems.length}`;
+        
+        const qEl = document.createElement("div");
+        qEl.className = "ema-question";
+        qEl.textContent = item.label;
+        container.appendChild(qEl);
 
-        // figure out which items to show
-        const isMorning = sessionType === "emamorning";
-        const items = isMorning
-          ? [...EMA_ITEMS.morning, ...EMA_ITEMS.common]
-          : [...EMA_ITEMS.common];
+        if (item.type === "slider") {
+          const wrap = document.createElement("div"); wrap.className = "slider-group";
+          const valEl = document.createElement("div"); valEl.className = "slider-val-display"; valEl.textContent = item.defaultVal + item.unit;
+          const input = document.createElement("input"); input.type = "range"; input.className = "range-slider";
+          input.min = item.min; input.max = item.max; input.step = item.step; input.value = item.defaultVal;
+          input.addEventListener("input", () => { 
+            valEl.textContent = input.value + item.unit; 
+            sessionResponses[item.id] = parseFloat(input.value);
+            nextBtn.disabled = false;
+          });
+          const anchors = document.createElement("div"); anchors.className = "slider-labels";
+          anchors.innerHTML = `<span>${item.leftAnchor}</span><span>${item.rightAnchor}</span>`;
+          wrap.append(valEl, input, anchors);
+          container.appendChild(wrap);
+          sessionResponses[item.id] = item.defaultVal;
+          nextBtn.disabled = false;
+        } 
+        else if (item.type === "choice") {
+          nextBtn.disabled = true;
+          const group = document.createElement("div"); group.className = "bubble-group";
+          item.options.forEach(opt => {
+            const b = document.createElement("div"); b.className = "bubble"; b.textContent = opt;
+            b.onclick = () => {
+              group.querySelectorAll(".bubble").forEach(ob => ob.classList.remove("selected"));
+              b.classList.add("selected");
+              sessionResponses[item.id] = opt;
+              nextBtn.disabled = false;
+            };
+            group.appendChild(b);
+          });
+          container.appendChild(group);
+        }
 
-        // set title based on session
-        const titleEl = document.getElementById("ema-title");
-        if (isMorning) titleEl.textContent = "Good Morning";
-        else if (sessionType === "emaevening") titleEl.textContent = "Good Evening";
-        else titleEl.textContent = "Check-In";
-
-        items.forEach(item => {
-          if (item.type === "slider") container.appendChild(buildSlider(item));
-          else if (item.type === "choice") container.appendChild(buildChoice(item));
-        });
+        nextBtn.textContent = currentIndex === activeItems.length - 1 ? "Submit Check-In" : "Next";
+        
+        container.classList.remove("fade-out", "fade-in");
+        void container.offsetWidth;
+        container.classList.add("fade-in");
+        setTimeout(() => container.classList.remove("fade-in"), 50);
       }
 
-      function collectResponses(sessionType) {
-        // walk the dom and grab values by item id.
-        // choice items that weren't tapped get logged as "unanswered".
-        const isMorning = sessionType === "emamorning";
-        const items = isMorning
-          ? [...EMA_ITEMS.morning, ...EMA_ITEMS.common]
-          : [...EMA_ITEMS.common];
-
-        const responses = {
-          type: "ema_response",
-          session: isMorning ? "morning" : (sessionType === "emaevening" ? "evening" : "afternoon"),
-          submittedAt: new Date().toISOString(),
-        };
-
-        items.forEach(item => {
-          if (item.type === "slider") {
-            const el = document.querySelector(`[data-field-id="${item.id}"]`);
-            responses[item.id] = el ? parseFloat(el.value) : null;
-          } else if (item.type === "choice") {
-            const wrap = document.querySelector(`[data-item-id="${item.id}"]`);
-            responses[item.id] = (wrap && wrap.dataset.selectedVal) || "unanswered";
+      nextBtn.onclick = () => {
+        container.classList.add("fade-out");
+        setTimeout(() => {
+          if (currentIndex < activeItems.length - 1) {
+            currentIndex++;
+            renderCurrentItem();
+          } else {
+            sessionResponses.submittedAt = new Date().toISOString();
+            App.submitEMAResponses(sessionResponses);
           }
-        });
+        }, 300);
+      };
 
-        return responses;
+      return {
+        start(sessionType) {
+          const isMorning = sessionType === "emamorning";
+          activeItems = isMorning ? [...EMA_ITEMS.morning, ...EMA_ITEMS.common] : [...EMA_ITEMS.common];
+          currentIndex = 0;
+          sessionResponses = { type: "ema_response", session: isMorning ? "morning" : (sessionType === "emaevening" ? "evening" : "afternoon") };
+          renderCurrentItem();
+        }
+      };
+    })();
+
+    // ============================================================
+    // ONBOARDING MODULE 
+    // ============================================================
+    const Onboarding = (function() {
+      const STEPS = [
+        { id: "audio", title: "Audio Setup", text: "This task requires precision timing.<br><br>Please use <strong>wired earphones</strong> or the <strong>built-in device speaker</strong>.<br><br><span style='color:var(--accent-red); font-size:0.9rem;'>⚠️ Bluetooth headphones introduce delay and cannot be used.</span>", btnText: "I'm using wired/built-in audio" },
+        { id: "test", title: "Sound Check", text: "<span style='font-size:0.9rem; color:var(--fg-muted);'>iPhone users: Ensure silent switch is OFF.</span><br><br>Let's make sure you can hear the tones.", action: "test" },
+        { id: "prep", title: "Sensor Prep", text: "Place the tip of your index finger gently over both the <strong>rear camera lens</strong> and the <strong>flashlight</strong>.<br><br>Keep perfectly still.", btnText: "Start Calibration" },
+        { id: "post", title: "Calibration Complete", text: "In the main task, you will hear a series of tones representing your heartbeats.<br><br>Rotate the dial until the tone feels perfectly <strong>in sync</strong> with your actual heartbeat.", btnText: "Continue" },
+        { id: "rules", title: "Instructions", text: "Do <strong>not</strong> try to feel your pulse with your other hand. Tune into your internal perception.<br><br>You will start with 2 practice trials.", btnText: "Begin Practice" }
+      ];
+      
+      let currentStepIndex = 0;
+      const container = document.getElementById("onboarding-container");
+      const btn = document.getElementById("onboarding-next-btn");
+
+      function renderStep() {
+        container.innerHTML = "";
+        const step = STEPS[currentStepIndex];
+        
+        container.innerHTML = `<h1>${step.title}</h1><p>${step.text}</p>`;
+        
+        if (step.action === "test") {
+          btn.textContent = "🔊 Play Test Tone";
+          btn.onclick = () => {
+            AudioEngine.resume();
+            AudioEngine.playLow(); setTimeout(() => AudioEngine.playLow(), 400); setTimeout(() => AudioEngine.playLow(), 800);
+            container.innerHTML += `<p style="margin-top:24px; font-weight:600; color:var(--fg);">Did you hear the tone?</p>`;
+            btn.textContent = "Yes, continue";
+            btn.onclick = nextStep;
+          };
+        } else {
+          btn.textContent = step.btnText;
+          btn.onclick = () => {
+            if (step.id === "prep") { App.startCalibration(); }
+            else if (step.id === "rules") { App.startTrials(); }
+            else { nextStep(); }
+          };
+        }
+        
+        container.classList.remove("fade-out");
+        void container.offsetWidth;
       }
 
-      // expose schemas too — useful for the R pipeline and for methods writeup
-      return { render, collectResponses, EMA_ITEMS };
+      function nextStep() {
+        container.classList.add("fade-out");
+        setTimeout(() => { currentStepIndex++; renderStep(); }, 300);
+      }
+
+      return {
+        start() { currentStepIndex = 0; renderStep(); },
+        showPostCalibration() { currentStepIndex = 3; renderStep(); }
+      };
     })();
 
     // ============================================================
     // TASK LOGIC & UI
     // ============================================================
     const App = (function () {
-      const NUM_TRIALS = 20, NUM_PRACTICES = 2, BODY_MAP_EVERY = 4, KNOB_VALUE_RANGE = 1.0, BASELINE_DURATION_S = 120;
-
+      const NUM_TRIALS = 20, NUM_PRACTICES = 2, BODY_MAP_EVERY = 4, BASELINE_DURATION_S = 120;
+      const KNOB_VALUE_RANGE = 1.0;
+      
+      // RESTORED: Device Metadata Function
       function collectDeviceMetadata() {
         const ua = navigator.userAgent;
         let deviceModel = 'Unknown', osName = 'Unknown', osVersion = '', browserName = 'Unknown', browserVersion = '';
@@ -882,89 +641,34 @@
         };
       }
 
-      // ============================================================
-      // SESSION DESCRIPTOR
-      // ------------------------------------------------------------
-      // one object carries everything about this session from start
-      // to upload. every downstream feature (pairing, dropout, upload)
-      // reads from here instead of reconstructing state from url params.
-      //
-      // shape:
-      //   sessionId        unique id, generated at start
-      //   participantId    from url or input
-      //   day              day N of the protocol (for multi-day EMA)
-      //   type             "ema_only" | "pat_only" | "paired"
-      //   phases           ordered list of phase names for this session
-      //   currentPhase     index into phases
-      //   counterbalance   "ema_first" | "pat_first" (only for paired)
-      //   startedAt        iso wall clock
-      //   wallClockAnchor  Date.now() at start — for converting perf timestamps
-      //   perfAnchor       performance.now() at start
-      //   device           device metadata
-      //   data             array, appended to by each phase
-      //   status           "in_progress" | "complete" | "abandoned"
-      // ============================================================
-      let sessionData = null;
-
-      function newSessionDescriptor() {
-        return {
-          sessionId: "ses_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
-          participantId: "",
-          day: null,
-          type: "",
-          phases: [],
-          currentPhase: 0,
-          counterbalance: null,
-          startedAt: null,
-          wallClockAnchor: null,
-          perfAnchor: null,
-          device: null,
-          detectionAlgorithm: "wabp_onset",
-          data: [],
-          status: "in_progress",
-
-          // legacy back-compat — older code reads these names, point them
-          // at the new fields so we don't have to touch every call site at once
-          get participantID() { return this.participantId; },
-          set participantID(v) { this.participantId = v; },
-          get taskType() {
-            // back-compat: reconstruct "EMA" / "PAT" from phase
-            const phase = this.phases[this.currentPhase];
-            if (!phase) return "";
-            if (phase.startsWith("ema")) return "EMA";
-            if (phase === "pat") return "PAT";
-            return phase.toUpperCase();
-          },
-          set taskType(v) { /* ignored — phases drive this now */ },
-          get date() { return this.startedAt; },
-          set date(v) { this.startedAt = v; },
-        };
-      }
+      let sessionData = null, currentEmaSessionType = null;
       let currentTrialIndex = -NUM_PRACTICES, currentKnobValue = 0, trialRunning = false, trialDetectorRunning = false;
       let trialIP = [], trialAP = [], trialKS = [], trialCD = [], trialIE = [], trialRecordedHR = [], trialInstantBpms = [];
       let trialToneTimings = [], trialFingerLossEvents = [], trialInitialKnob = 0;
-
-      // --- IBI Plausibility (silent per-trial logging for R pipeline) ---
+      
       const IBI_CHANGE_THRESHOLD = 0.30;
-      let trialLastIbi = 0, trialCleanBeats = 0, trialFlaggedBeats = 0;
-      let trialIbiFlags = [];
-
-      // --- SQI time series (silent per-trial logging) ---
-      const SQI_GOOD = 0.008, SQI_WARN = 0.003;
-      let trialSqiTimeSeries = [], trialSqiBadSeconds = 0, trialLastSqiCheckTime = 0;
-
-      // --- Dicrotic rejection log (silent per-trial logging) ---
-      let trialDicroticRejections = [];
-      let currentInstantPeriod = 0, currentAveragePeriod = 0, baselineStartTime = 0, baselineTimer = null, baselineBPMs = [], waveBuffer = [];
-      const screens = {}, WAVE_MAX = 180;
+      let trialLastIbi = 0, trialCleanBeats = 0, trialFlaggedBeats = 0, trialIbiFlags = [];
+      const SQI_GOOD = 0.008, SQI_WARN = 0.004;
+      let trialSqiTimeSeries = [], trialSqiBadSeconds = 0, trialLastSqiCheckTime = 0, trialDicroticRejections = [];
+      
+      let currentInstantPeriod = 0, currentAveragePeriod = 0, baselineStartTime = 0, baselineTimer = null, baselineBPMs = [];
+      const screens = {};
+      
+      // Endless Dial State
       let dialEl, dialAngle = 0, dialDragging = false, dialCx = 0, dialCy = 0, lastAngle = 0;
-      // which ema variant this session is running (set by url param in init)
-      let currentEmaSessionType = null;
+      let trialVisualOffset = 0; 
+
+      // Unified Sensor State
+      let isFingerPresent = false;
+      let currentSqiValue = 0;
+      let lastBeatPerfTime = performance.now();
+      let sensorCheckInterval = null;
 
       function show(id) {
-        document.querySelectorAll(".finger-overlay").forEach((el) => el.classList.remove("visible"));
         if (screens.active) screens.active.classList.remove("active");
-        screens.active = document.getElementById(id); screens.active.classList.add("active");
+        const targetScreen = document.getElementById(id);
+        screens.active = targetScreen;
+        if (screens.active) screens.active.classList.add("active");
       }
 
       function initDial() {
@@ -976,170 +680,139 @@
           lastAngle = Math.atan2(e.clientY - dialCy, e.clientX - dialCx);
           dialEl.setPointerCapture(e.pointerId);
         }, { passive: false });
+
         window.addEventListener("pointermove", (e) => {
           if (!dialDragging) return; e.preventDefault();
           const a = Math.atan2(e.clientY - dialCy, e.clientX - dialCx);
-          let d = a - lastAngle; if (d > Math.PI) d -= 2 * Math.PI; if (d < -Math.PI) d += 2 * Math.PI;
-          dialAngle = Math.max(-Math.PI, Math.min(Math.PI, dialAngle + d)); lastAngle = a;
-          currentKnobValue = ((dialAngle + Math.PI) / (2 * Math.PI) * 2 - 1) * KNOB_VALUE_RANGE;
+          let d = a - lastAngle; 
+          
+          // Seamless endless rotation (no Math.max clamps)
+          if (d > Math.PI) d -= 2 * Math.PI; 
+          if (d < -Math.PI) d += 2 * Math.PI;
+          
+          dialAngle += d; // Accumulate angle endlessly
+          lastAngle = a;
           dialEl.style.transform = `rotate(${dialAngle}rad)`;
+
+          // Apply the per-trial random visual offset
+          let rawPhase = ((dialAngle + trialVisualOffset) / Math.PI) % 2;
+          // Wrap accurately into -1 to 1 bounds
+          if (rawPhase > 1) rawPhase -= 2;
+          if (rawPhase < -1) rawPhase += 2;
+          
+          currentKnobValue = rawPhase; 
           document.getElementById("confirm-trial-btn").disabled = false;
         }, { passive: false });
+        
         window.addEventListener("pointerup", () => { dialDragging = false; });
       }
 
-      function drawWaveform() {
-        const c = document.getElementById("wave-canvas"), ctx = c.getContext("2d");
-        const w = c.clientWidth, h = c.clientHeight; ctx.clearRect(0, 0, c.width, c.height);
-        if (waveBuffer.length < 2) return;
-        let min = waveBuffer[0], max = waveBuffer[0];
-        for (const v of waveBuffer) { if (v < min) min = v; if (v > max) max = v; }
-        const range = max - min || 0.001, pad = 8, dpr = window.devicePixelRatio || 1;
-        ctx.beginPath(); ctx.strokeStyle = "#ef4444"; ctx.lineWidth = 2 * dpr; ctx.lineJoin = "round";
-        const xStep = (w * dpr) / WAVE_MAX, xOff = (WAVE_MAX - waveBuffer.length) * xStep;
-        for (let i = 0; i < waveBuffer.length; i++) {
-          const x = xOff + i * xStep, y = pad * dpr + ((max - waveBuffer[i]) / range) * (h * dpr - pad * 2 * dpr);
-          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-        }
-        ctx.stroke();
+      // Unified Live Sensor Warning Logic
+      function startSensorWatchdog() {
+         if (sensorCheckInterval) clearInterval(sensorCheckInterval);
+         lastBeatPerfTime = performance.now();
+         sensorCheckInterval = setInterval(updateSensorWarning, 250);
+      }
+      
+      function stopSensorWatchdog() {
+         if (sensorCheckInterval) clearInterval(sensorCheckInterval);
+         document.getElementById("sensor-warning-overlay").classList.remove("visible");
       }
 
-      // Silent IBI plausibility check — no UI, writes to per-trial arrays for JSON export
+      function updateSensorWarning() {
+         const overlay = document.getElementById("sensor-warning-overlay");
+         const text = document.getElementById("sensor-warning-text");
+         const circle = document.getElementById("sensor-preview-circle");
+
+         if (!isFingerPresent) {
+             overlay.classList.add("visible");
+             text.innerHTML = "Place finger on camera<br><span style='font-size:0.85rem;color:var(--fg-muted);font-weight:400;margin-top:6px;display:block;'>Cover both lens and flash completely</span>";
+             circle.style.borderColor = "var(--fg)";
+             circle.style.boxShadow = "none";
+         } else if (currentSqiValue < SQI_WARN) {
+             overlay.classList.add("visible");
+             text.innerHTML = "Make the circle red<br><span style='font-size:0.85rem;color:var(--fg-muted);font-weight:400;margin-top:6px;display:block;'>Adjust pressure gently until the feed glows solid red</span>";
+             circle.style.borderColor = "var(--accent-red)";
+             circle.style.boxShadow = "0 0 20px rgba(255, 69, 58, 0.3)";
+         } else if (performance.now() - lastBeatPerfTime > 2500) {
+             // Re-calibration Lag state
+             overlay.classList.add("visible");
+             text.innerHTML = "Acquiring signal...<br><span style='font-size:0.85rem;color:var(--fg-muted);font-weight:400;margin-top:6px;display:block;'>Hold completely still</span>";
+             circle.style.borderColor = "var(--fg-muted)";
+             circle.style.boxShadow = "none";
+         } else {
+             overlay.classList.remove("visible");
+         }
+      }
+
       function processIbi(beat) {
         const ibiMs = beat.instantPeriod * 1000;
         let flag = null;
         if (trialLastIbi > 0) {
           const changeFrac = Math.abs(ibiMs - trialLastIbi) / trialLastIbi;
           if (changeFrac > IBI_CHANGE_THRESHOLD) {
-            flag = {
-              type: 'successive_diff',
-              magnitude: Math.round(changeFrac * 1000) / 10,
-              prevIbi: Math.round(trialLastIbi),
-              currentIbi: Math.round(ibiMs)
-            };
+            flag = { type: 'successive_diff', magnitude: Math.round(changeFrac * 1000) / 10, prevIbi: Math.round(trialLastIbi), currentIbi: Math.round(ibiMs) };
             trialFlaggedBeats++;
-          } else {
-            trialCleanBeats++;
-          }
-        } else {
-          trialCleanBeats++;
-        }
+          } else { trialCleanBeats++; }
+        } else { trialCleanBeats++; }
         trialLastIbi = ibiMs;
         trialIbiFlags.push({ time: beat.time, ibiMs: Math.round(ibiMs * 10) / 10, flag });
       }
 
-      const MIN_BASELINE_BEATS = 80;
-
       async function startBaseline() {
         show("screen-baseline");
-        baselineBPMs = []; waveBuffer = []; baselineStartTime = Date.now();
+        baselineBPMs = []; baselineStartTime = Date.now();
         await WakeLockCtrl.request();
 
-        const progEl = document.getElementById("baseline-progress"), secsEl = document.getElementById("baseline-secs");
-        const bpmEl = document.getElementById("baseline-bpm"), statusEl = document.getElementById("baseline-status");
-        
-        // Setup Waveform canvas
-        const c = document.getElementById("wave-canvas"), dpr = window.devicePixelRatio || 1;
-        c.width = c.clientWidth * dpr; c.height = c.clientHeight * dpr;
-        
-        // Setup Preview canvas
-        const previewCanvas = document.getElementById("camera-preview");
-        const previewCtx = previewCanvas.getContext("2d");
-        const previewSize = 80 * dpr;
-        previewCanvas.width = previewSize; 
-        previewCanvas.height = previewSize;
+        const bpmEl = document.getElementById("baseline-bpm");
+        const progressCircle = document.getElementById("baseline-progress-circle");
         const videoElement = document.getElementById("video-feed");
+        const previewCtx = document.getElementById("sensor-preview-circle").getContext("2d");
+        document.getElementById("sensor-preview-circle").width = 120 * (window.devicePixelRatio || 1);
+        document.getElementById("sensor-preview-circle").height = 120 * (window.devicePixelRatio || 1);
 
-        let beatCount = 0;
+        startSensorWatchdog();
+        
         await BeatDetector.start({
           video: videoElement, canvas: document.getElementById("sampling-canvas"),
-          onBeatCb: (beat) => {
-            baselineBPMs.push(beat.instantBPM); bpmEl.textContent = Math.round(beat.averageBPM);
-            beatCount++; document.getElementById("baseline-beat-count").textContent = beatCount;
+          onBeatCb: (beat) => { 
+             baselineBPMs.push(beat.instantBPM); 
+             bpmEl.textContent = Math.round(beat.averageBPM); 
+             lastBeatPerfTime = performance.now();
           },
-          onFingerChangeCb: (p) => {
-            document.getElementById("baseline-finger-overlay").classList.toggle("visible", !p);
-            if (!p) {
-               statusEl.textContent = "Awaiting contact...";
-               statusEl.style.color = "var(--fg-muted)";
-            }
-          },
-          onSqiUpdateCb: (sqi) => {
-            if (document.getElementById("baseline-finger-overlay").classList.contains("visible")) return; 
-            
-            if (sqi >= 0.008) {
-              statusEl.textContent = "Perfect pressure. Hold still.";
-              statusEl.style.color = "var(--accent-green)"; 
-            } else if (sqi >= 0.004) {
-              statusEl.textContent = "Good signal. Recording...";
-              statusEl.style.color = "var(--fg-muted)";
-            } else {
-              statusEl.textContent = "Signal weak: Try pressing slightly lighter.";
-              statusEl.style.color = "var(--accent-yellow)"; 
-            }
-          },
-          onPPGSampleCb: (sample) => {
-            waveBuffer.push(sample); if (waveBuffer.length > WAVE_MAX) waveBuffer.shift(); drawWaveform();
-            
-            // Draw video to preview canvas
-            if (videoElement && videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
-              previewCtx.save(); 
-              previewCtx.beginPath(); 
-              previewCtx.arc(previewSize / 2, previewSize / 2, previewSize / 2, 0, Math.PI * 2); 
-              previewCtx.closePath(); 
-              previewCtx.clip();
-              previewCtx.drawImage(videoElement, 0, 0, previewSize, previewSize); 
-              previewCtx.restore();
-            }
-          },
+          onFingerChangeCb: (p) => { isFingerPresent = p; updateSensorWarning(); },
+          onSqiUpdateCb: (sqi) => { currentSqiValue = sqi; updateSensorWarning(); },
+          onPPGSampleCb: () => {
+             if (videoElement && videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
+                const dpr = window.devicePixelRatio || 1;
+                previewCtx.drawImage(videoElement, 0, 0, 120 * dpr, 120 * dpr);
+             }
+          }
         });
 
-        const circ = 2 * Math.PI * 45;
+        const circ = 2 * Math.PI * 85;
         baselineTimer = setInterval(async () => {
           const elapsed = (Date.now() - baselineStartTime) / 1000, remaining = Math.max(0, BASELINE_DURATION_S - elapsed);
-          progEl.textContent = Math.round(Math.min(1, elapsed / BASELINE_DURATION_S) * 100) + "%";
-          secsEl.textContent = Math.ceil(remaining);
-          document.getElementById("baseline-progress-circle").style.strokeDashoffset = circ * (1 - Math.min(1, elapsed / BASELINE_DURATION_S));
+          progressCircle.style.strokeDashoffset = circ * (1 - Math.min(1, elapsed / BASELINE_DURATION_S));
           
           if (remaining <= 0) {
             clearInterval(baselineTimer);
+            stopSensorWatchdog();
             BeatDetector.setCallbacks({ onBeatCb: null, onFingerChangeCb: null, onPPGSampleCb: null, onSqiUpdateCb: null, onDicroticRejectCb: null });
             trialDetectorRunning = true; 
             
             const diagnostics = BeatDetector.getDiagnostics();
             const finalSqi = BeatDetector.getSqi();
 
-            // 1. Check for sufficient beats
-            if (baselineBPMs.length < MIN_BASELINE_BEATS) {
-              await BeatDetector.stop(); trialDetectorRunning = false;
-              statusEl.textContent = `Only ${baselineBPMs.length} beats detected. Restarting...`;
-              statusEl.style.color = "var(--accent-red)";
-              setTimeout(() => startBaseline(), 3000);
-              return;
-            }
-            
-            // 2. Check for severe clipping (Auto-exposure ruined the signal)
-            if (diagnostics.clipRate > 20) {
+            if (baselineBPMs.length < 80 || diagnostics.clipRate > 20 || finalSqi < 0.002) {
                await BeatDetector.stop(); trialDetectorRunning = false;
-               statusEl.textContent = `Light leakage detected. Ensure your finger covers the flash completely. Restarting...`;
-               statusEl.style.color = "var(--accent-red)";
-               setTimeout(() => startBaseline(), 4000);
-               return;
-            }
-
-            // 3. Check for terrible SQI at the end of the baseline
-            if (finalSqi < 0.002) {
-               await BeatDetector.stop(); trialDetectorRunning = false;
-               statusEl.textContent = `Signal quality too low. Remember to press gently. Restarting...`;
-               statusEl.style.color = "var(--accent-red)";
-               setTimeout(() => startBaseline(), 4000);
+               setTimeout(() => startBaseline(), 4000); // Silent restart if baseline fails
                return;
             }
 
             sessionData.data.push({ type: "baseline", recordedHR: baselineBPMs.map(Math.round), totalBeats: baselineBPMs.length, ppgSampleRate: BeatDetector.getActualFPS(), ppgDiagnostics: diagnostics, finalSqi: finalSqi });
             show("screen-onboarding"); 
-            document.querySelector(".onboarding-step.active").classList.remove("active");
-            document.querySelector('.onboarding-step[data-step="post-baseline"]').classList.add("active");
+            Onboarding.showPostCalibration();
           }
         }, 1000);
       }
@@ -1148,46 +821,51 @@
         show("screen-trial");
         trialIP = []; trialAP = []; trialKS = []; trialCD = []; trialIE = []; trialRecordedHR = []; trialInstantBpms = [];
         trialToneTimings = []; trialFingerLossEvents = [];
-        // Reset per-trial quality logging
         trialLastIbi = 0; trialCleanBeats = 0; trialFlaggedBeats = 0; trialIbiFlags = [];
-        trialSqiTimeSeries = []; trialSqiBadSeconds = 0; trialLastSqiCheckTime = 0;
-        trialDicroticRejections = [];
-        // Clear any lingering SQI warning from previous trial
-        const _sqiDot = document.getElementById("trial-sqi-dot");
-        if (_sqiDot) _sqiDot.classList.remove("visible");
+        trialSqiTimeSeries = []; trialSqiBadSeconds = 0; trialLastSqiCheckTime = 0; trialDicroticRejections = [];
+        
         currentInstantPeriod = 0; currentAveragePeriod = 0;
-        currentKnobValue = (Math.random() * 2 - 1) * KNOB_VALUE_RANGE;
+        
+        // Endless Dial offset logic
+        trialVisualOffset = (Math.random() * 2 - 1) * Math.PI; // Random offset per trial
+        dialAngle = 0; // Visual starting angle is zero
+        if(dialEl) dialEl.style.transform = `rotate(0rad)`;
+        
+        let rawPhase = ((dialAngle + trialVisualOffset) / Math.PI) % 2;
+        if (rawPhase > 1) rawPhase -= 2;
+        if (rawPhase < -1) rawPhase += 2;
+        currentKnobValue = rawPhase;
         trialInitialKnob = currentKnobValue;
-        dialAngle = ((currentKnobValue + KNOB_VALUE_RANGE) / (2 * KNOB_VALUE_RANGE)) * 2 * Math.PI - Math.PI;
-        if(dialEl) dialEl.style.transform = `rotate(${dialAngle}rad)`;
         
         trialRunning = true;
         document.getElementById("trial-label").textContent = currentTrialIndex < 0 ? `Practice Trial ${NUM_PRACTICES + currentTrialIndex + 1}` : `Trial ${currentTrialIndex + 1} of ${NUM_TRIALS}`;
         document.getElementById("confirm-trial-btn").disabled = true;
         MotionDetector.start();
 
+        const videoElement = document.getElementById("video-feed");
+        const previewCtx = document.getElementById("sensor-preview-circle").getContext("2d");
+        document.getElementById("sensor-preview-circle").width = 120 * (window.devicePixelRatio || 1);
+        document.getElementById("sensor-preview-circle").height = 120 * (window.devicePixelRatio || 1);
+        
+        startSensorWatchdog();
+
         const beatCb = (beat) => {
+          lastBeatPerfTime = performance.now();
           const prev = currentInstantPeriod;
           currentInstantPeriod = beat.instantPeriod; currentAveragePeriod = beat.averagePeriod;
           trialIP.push(currentInstantPeriod); trialAP.push(currentAveragePeriod);
           trialKS.push(currentKnobValue); trialIE.push(prev - currentInstantPeriod);
+          
           const delay = (currentAveragePeriod / 2) * currentKnobValue;
           trialCD.push(delay); trialRecordedHR.push(beat.instantBPM); trialInstantBpms.push(beat.averageBPM);
           
-          // Silent IBI plausibility logging
           processIbi(beat);
           
           const dNow = delay < 0 ? currentInstantPeriod + delay : delay;
           if (dNow > 0 && dNow < 3) {
             const timing = AudioEngine.scheduleAt(dNow);
             if (timing) {
-              trialToneTimings.push({
-                beatDetectedAt: performance.now(),
-                beatTime: beat.time,
-                intendedDelay: dNow,
-                scheduledAt: timing.scheduledAt,
-                perfNow: timing.perfNow,
-              });
+              trialToneTimings.push({ beatTime: beat.time, intendedDelay: dNow, scheduledAt: timing.scheduledAt, perfNow: timing.perfNow });
             }
           }
           
@@ -1198,107 +876,75 @@
         };
 
         const fCb = (p) => {
-          document.getElementById("trial-finger-overlay").classList.toggle("visible", !p);
-          if (!p) {
-            trialFingerLossEvents.push({ lostAt: performance.now() });
-          } else if (trialFingerLossEvents.length > 0 && !trialFingerLossEvents[trialFingerLossEvents.length - 1].restoredAt) {
+          isFingerPresent = p; updateSensorWarning();
+          if (!p) { trialFingerLossEvents.push({ lostAt: performance.now() }); } 
+          else if (trialFingerLossEvents.length > 0 && !trialFingerLossEvents[trialFingerLossEvents.length - 1].restoredAt) {
             trialFingerLossEvents[trialFingerLossEvents.length - 1].restoredAt = performance.now();
           }
         };
 
-        // Silent SQI logging callback + passive visual warning
-        const SQI_DOT_SHOW = 0.004;   // dot appears below this
-        const SQI_DOT_HIDE = 0.007;   // dot disappears above this (hysteresis)
-        const sqiDotEl = document.getElementById("trial-sqi-dot");
         const sqiCb = (sqi) => {
+          currentSqiValue = sqi; updateSensorWarning();
           const now = Date.now();
-          if (trialLastSqiCheckTime > 0 && sqi < SQI_WARN) {
-            trialSqiBadSeconds += (now - trialLastSqiCheckTime) / 1000;
-          }
+          if (trialLastSqiCheckTime > 0 && sqi < SQI_WARN) { trialSqiBadSeconds += (now - trialLastSqiCheckTime) / 1000; }
           trialLastSqiCheckTime = now;
           trialSqiTimeSeries.push({ time: now, sqi: Math.round(sqi * 100000) / 100000 });
-
-          // Passive peripheral warning — no numbers, no text, just a dot
-          if (sqiDotEl) {
-            if (sqi < SQI_DOT_SHOW) sqiDotEl.classList.add("visible");
-            else if (sqi > SQI_DOT_HIDE) sqiDotEl.classList.remove("visible");
-          }
         };
 
-        // Silent dicrotic rejection logging callback
-        const dicroticCb = (info) => {
-          trialDicroticRejections.push(info);
+        const ppgCb = () => {
+           // Continually update the sensor feed so it's ready when the overlay needs it
+           if (videoElement && videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
+              const dpr = window.devicePixelRatio || 1;
+              previewCtx.drawImage(videoElement, 0, 0, 120 * dpr, 120 * dpr);
+           }
         };
 
         if (!trialDetectorRunning) {
-          await BeatDetector.start({ video: document.getElementById("video-feed"), canvas: document.getElementById("sampling-canvas"), onBeatCb: beatCb, onFingerChangeCb: fCb, onSqiUpdateCb: sqiCb, onDicroticRejectCb: dicroticCb });
+          await BeatDetector.start({ video: videoElement, canvas: document.getElementById("sampling-canvas"), onBeatCb: beatCb, onFingerChangeCb: fCb, onSqiUpdateCb: sqiCb, onDicroticRejectCb: (info) => trialDicroticRejections.push(info), onPPGSampleCb: ppgCb });
           trialDetectorRunning = true;
-        } else { BeatDetector.setCallbacks({ onBeatCb: beatCb, onFingerChangeCb: fCb, onSqiUpdateCb: sqiCb, onDicroticRejectCb: dicroticCb }); }
+        } else { BeatDetector.setCallbacks({ onBeatCb: beatCb, onFingerChangeCb: fCb, onSqiUpdateCb: sqiCb, onDicroticRejectCb: (info) => trialDicroticRejections.push(info), onPPGSampleCb: ppgCb }); }
       }
 
       function confirmTrial() {
-        trialRunning = false; MotionDetector.stop();
-        BeatDetector.setCallbacks({ onBeatCb: null, onFingerChangeCb: null, onSqiUpdateCb: null, onDicroticRejectCb: null });
-        show("screen-confidence");
-        const sl = document.getElementById("confidence-slider"), vd = document.getElementById("confidence-value"), btn = document.getElementById("confirm-confidence-btn");
-        sl.value = 5; vd.textContent = 5; btn.disabled = true;
+        trialRunning = false; MotionDetector.stop(); stopSensorWatchdog();
+        BeatDetector.setCallbacks({ onBeatCb: null, onFingerChangeCb: null, onSqiUpdateCb: null, onDicroticRejectCb: null, onPPGSampleCb: null });
+        
+        show("screen-ema");
+        document.getElementById("ema-progress-text").textContent = "CONFIDENCE";
+        const container = document.getElementById("ema-single-container");
+        container.innerHTML = `
+          <div class="ema-question">How confident are you that the sound matched your heartbeat?</div>
+          <div class="slider-group">
+            <div class="slider-val-display" id="conf-val">5</div>
+            <input type="range" class="range-slider" id="conf-slider" min="0" max="9" step="1" value="5">
+            <div class="slider-labels"><span>Guessing</span><span>Certain</span></div>
+          </div>
+        `;
+        const sl = document.getElementById("conf-slider"), vd = document.getElementById("conf-val"), btn = document.getElementById("ema-next-btn");
+        btn.textContent = "Submit"; btn.disabled = true;
         sl.oninput = () => { vd.textContent = sl.value; btn.disabled = false; };
+        
         btn.onclick = () => {
           const totalBeats = trialCleanBeats + trialFlaggedBeats;
-          const td = { type: "trial", isPractice: currentTrialIndex < 0, initialKnobValue: trialInitialKnob, instantPeriods: [...trialIP], averagePeriods: [...trialAP], knobScales: [...trialKS], currentDelays: [...trialCD], instantErrs: [...trialIE], recordedHR: [...trialRecordedHR], instantBpms: [...trialInstantBpms], toneTimings: [...trialToneTimings], fingerLossEvents: [...trialFingerLossEvents], confidence: parseInt(sl.value), bodyPos: -1, ppgDiagnostics: BeatDetector.getDiagnostics(),
-            ibiFlags: [...trialIbiFlags],
-            sqiTimeSeries: [...trialSqiTimeSeries],
-            dicroticRejections: [...trialDicroticRejections],
-            qualitySummary: {
-              totalBeats,
-              cleanBeats: trialCleanBeats,
-              flaggedBeats: trialFlaggedBeats,
-              flagRate: totalBeats > 0 ? Math.round(trialFlaggedBeats / totalBeats * 10000) / 100 : 0,
-              dicroticRejectsCount: trialDicroticRejections.length,
-              sqiBadSeconds: Math.round(trialSqiBadSeconds * 10) / 10,
-              sqiFinalValue: Math.round(BeatDetector.getSqi() * 100000) / 100000,
-              ibiChangeThreshold: IBI_CHANGE_THRESHOLD,
-              sqiGoodThreshold: SQI_GOOD,
-              sqiWarnThreshold: SQI_WARN
-            }
-          };
+          const td = { type: "trial", isPractice: currentTrialIndex < 0, initialKnobValue: trialInitialKnob, visualOffset: trialVisualOffset, instantPeriods: [...trialIP], averagePeriods: [...trialAP], knobScales: [...trialKS], currentDelays: [...trialCD], instantErrs: [...trialIE], recordedHR: [...trialRecordedHR], instantBpms: [...trialInstantBpms], toneTimings: [...trialToneTimings], fingerLossEvents: [...trialFingerLossEvents], confidence: parseInt(sl.value), bodyPos: -1, ppgDiagnostics: BeatDetector.getDiagnostics(), ibiFlags: [...trialIbiFlags], sqiTimeSeries: [...trialSqiTimeSeries], dicroticRejections: [...trialDicroticRejections], qualitySummary: { totalBeats, cleanBeats: trialCleanBeats, flaggedBeats: trialFlaggedBeats, flagRate: totalBeats > 0 ? Math.round(trialFlaggedBeats / totalBeats * 10000) / 100 : 0, dicroticRejectsCount: trialDicroticRejections.length, sqiBadSeconds: Math.round(trialSqiBadSeconds * 10) / 10, sqiFinalValue: Math.round(BeatDetector.getSqi() * 100000) / 100000, ibiChangeThreshold: IBI_CHANGE_THRESHOLD, sqiGoodThreshold: SQI_GOOD, sqiWarnThreshold: SQI_WARN } };
+          
           if (currentTrialIndex >= 0 && (currentTrialIndex + 1) % BODY_MAP_EVERY === 0) {
             show("screen-bodymap");
-            const parts = document.querySelectorAll(".body-part"), nb = document.getElementById("nowhere-btn"), cb = document.getElementById("confirm-bodymap-btn"), lb = document.getElementById("bodymap-selected");
-            let sel = -1; cb.disabled = true; lb.textContent = "";
-            parts.forEach((p) => { p.classList.remove("selected"); p.onclick = () => { parts.forEach(pp => pp.classList.remove("selected")); nb.classList.remove("selected"); p.classList.add("selected"); sel = parseInt(p.dataset.value); lb.textContent = p.dataset.name; cb.disabled = false; }; });
-            nb.classList.remove("selected"); nb.onclick = () => { parts.forEach(pp => pp.classList.remove("selected")); nb.classList.add("selected"); sel = 8; lb.textContent = "None"; cb.disabled = false; };
+            const parts = document.querySelectorAll(".body-part"), nb = document.getElementById("nowhere-btn"), cb = document.getElementById("confirm-bodymap-btn");
+            let sel = -1; cb.disabled = true;
+            parts.forEach((p) => { p.classList.remove("selected"); p.onclick = () => { parts.forEach(pp => pp.classList.remove("selected")); nb.classList.remove("selected"); p.classList.add("selected"); sel = parseInt(p.dataset.value); cb.disabled = false; }; });
+            nb.classList.remove("selected"); nb.onclick = () => { parts.forEach(pp => pp.classList.remove("selected")); nb.classList.add("selected"); sel = 8; cb.disabled = false; };
             cb.onclick = () => { td.bodyPos = sel; endTrial(td); };
           } else { endTrial(td); }
         };
       }
 
       async function endTrial(td) {
-  // Snapshot audio telemetry into this trial before pushing
-  td.audioDropLog = AudioEngine.getDropLog();
-  td.audioCtxState = AudioEngine.getState();
-  AudioEngine.clearDropLog();
-  AudioEngine.resetSchedulerState();
-
-  sessionData.data.push(td);
-  currentTrialIndex++;
-  if (currentTrialIndex >= NUM_TRIALS) {
-    trialDetectorRunning = false;
-    await BeatDetector.stop();
-    WakeLockCtrl.release();
-    // pat phase done — let the session router decide what's next
-    window._epatAdvancePhase();
-  } else {
-    startTrial();
-  }
-}
-
-      function submitEMA() {
-        // module handles item collection — just take what it gives us and log
-        const responses = EMA.collectResponses(currentEmaSessionType);
-        sessionData.data.push(responses);
-        // ema phase done — let the session router decide what's next
-        window._epatAdvancePhase();
+        td.audioDropLog = AudioEngine.getDropLog(); td.audioCtxState = AudioEngine.getState();
+        AudioEngine.clearDropLog(); AudioEngine.resetSchedulerState();
+        sessionData.data.push(td); currentTrialIndex++;
+        if (currentTrialIndex >= NUM_TRIALS) { trialDetectorRunning = false; await BeatDetector.stop(); WakeLockCtrl.release(); window._epatAdvancePhase(); } 
+        else { startTrial(); }
       }
 
       return {
@@ -1306,163 +952,68 @@
           screens.active = document.getElementById("screen-participant");
           initDial(); AudioEngine.init();
 
-          // URL Parsing logic
           const urlParams = new URLSearchParams(window.location.search);
-          const urlId = urlParams.get('id');
           const sessionType = urlParams.get('session') || '';
-          
-          // Theme injection logic
-          const THEMES = {
-            blue:   { accent: '#3b82f6', accentHover: '#2563eb' },
-            teal:   { accent: '#14b8a6', accentHover: '#0d9488' },
-            violet: { accent: '#8b5cf6', accentHover: '#7c3aed' },
-            rose:   { accent: '#f43f5e', accentHover: '#e11d48' },
-            amber:  { accent: '#f59e0b', accentHover: '#d97706' },
-          };
-          const urlTheme = urlParams.get('theme');
-          if (urlTheme && THEMES[urlTheme]) {
-            const root = document.documentElement.style;
-            root.setProperty('--accent-blue', THEMES[urlTheme].accent);
-            root.setProperty('--accent-blue-hover', THEMES[urlTheme].accentHover);
-          }
+          if (urlParams.get('id')) document.getElementById('participant-input').value = urlParams.get('id');
 
-          if (urlId) document.getElementById('participant-input').value = urlId;
+          sessionData = { sessionId: "ses_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8), participantId: "", day: parseInt(urlParams.get('day')) || null, type: "", phases: [], currentPhase: 0, counterbalance: null, startedAt: null, wallClockAnchor: null, perfAnchor: null, device: null, data: [], status: "in_progress" };
 
-          // build the session descriptor from url state
-          sessionData = newSessionDescriptor();
-
-          // day param is optional — for multi-day EMA protocols
-          const urlDay = urlParams.get('day');
-          if (urlDay) sessionData.day = parseInt(urlDay, 10);
-
-          // phases are driven by session type.
-          // "emamorning" / "emaafternoon" / "emaevening" → ema only
-          // "pat" → pat only
-          // "pair_morning" / "pair_afternoon" / "pair_evening" → paired, ema + pat
-          // counterbalance param decides order when paired (default: ema_first)
+          // Routing Fix: This properly routes ?session=emaafternoon to the right logic
           if (sessionType.startsWith('ema')) {
-            sessionData.type = "ema_only";
-            sessionData.phases = [sessionType];
-            document.getElementById('task-subtitle').textContent =
-              sessionType === 'emamorning'   ? "Morning Check-In"   :
-              sessionType === 'emaevening'   ? "Evening Check-In"   :
-                                               "Afternoon Check-In";
+            sessionData.type = "ema_only"; sessionData.phases = [sessionType];
+            document.getElementById('task-subtitle').textContent = sessionType === 'emamorning' ? "Morning Check-In" : sessionType === 'emaevening' ? "Evening Check-In" : "Afternoon Check-In";
           } else if (sessionType.startsWith('pair')) {
             sessionData.type = "paired";
-            // time-of-day derived from the suffix (morning/afternoon/evening)
-            const slot = sessionType.replace('pair_', '');
-            const emaPhase = 'ema' + slot;
-            // counterbalance — url param wins, else default ema_first
-            const cb = urlParams.get('cb') === 'pat_first' ? 'pat_first' : 'ema_first';
-            sessionData.counterbalance = cb;
-            sessionData.phases = cb === 'ema_first' ? [emaPhase, 'pat'] : ['pat', emaPhase];
-            document.getElementById('task-subtitle').textContent =
-              slot === 'morning'   ? "Morning Session"   :
-              slot === 'evening'   ? "Evening Session"   :
-                                     "Afternoon Session";
+            const slot = sessionType.replace('pair_', ''), emaPhase = 'ema' + slot, cb = urlParams.get('cb') === 'pat_first' ? 'pat_first' : 'ema_first';
+            sessionData.counterbalance = cb; sessionData.phases = cb === 'ema_first' ? [emaPhase, 'pat'] : ['pat', emaPhase];
+            document.getElementById('task-subtitle').textContent = slot === 'morning' ? "Morning Session" : slot === 'evening' ? "Evening Session" : "Afternoon Session";
           } else {
-            // default / pat-only
-            sessionData.type = "pat_only";
-            sessionData.phases = ['pat'];
+            sessionData.type = "pat_only"; sessionData.phases = ['pat'];
           }
 
           document.getElementById("start-btn").onclick = () => {
-            const pid = document.getElementById("participant-input").value.trim();
-            if (!pid) return;
-            sessionData.participantId = pid;
-            sessionData.startedAt = new Date().toISOString();
-            sessionData.wallClockAnchor = Date.now();
+            const pid = document.getElementById("participant-input").value.trim(); if (!pid) return;
+            sessionData.participantId = pid; 
+            sessionData.startedAt = new Date().toISOString(); 
+            sessionData.wallClockAnchor = Date.now(); 
             sessionData.perfAnchor = performance.now();
-            sessionData.device = collectDeviceMetadata();
-            AudioEngine.resume();
-            runNextPhase();
+            sessionData.device = collectDeviceMetadata(); // RESTORED
+            AudioEngine.resume(); runNextPhase();
           };
 
-          // phase dispatcher — reads sessionData.phases[currentPhase] and
-          // launches the right screen. each phase, when done, calls
-          // advancePhase() which either runs the next phase or finalizes.
           function runNextPhase() {
             const phase = sessionData.phases[sessionData.currentPhase];
             if (!phase) { finalizeSession(); return; }
-
-            if (phase.startsWith('ema')) {
-              currentEmaSessionType = phase;
-              EMA.render(phase);
-              show("screen-ema");
-            } else if (phase === 'pat') {
-              show("screen-onboarding");
-              document.querySelector('.onboarding-step[data-step="1"]').classList.add("active");
+            
+            if (phase.startsWith('ema')) { 
+              currentEmaSessionType = phase; 
+              show("screen-ema"); 
+              EMA.start(phase); 
+            } 
+            else if (phase === 'pat') { 
+              show("screen-onboarding"); 
+              Onboarding.start(); 
             }
           }
 
-          // called by each phase when it completes
-          window._epatAdvancePhase = function advancePhase() {
-            sessionData.currentPhase++;
-            if (sessionData.currentPhase >= sessionData.phases.length) {
-              finalizeSession();
-            } else {
-              runNextPhase();
-            }
-          };
+          window._epatAdvancePhase = function advancePhase() { sessionData.currentPhase++; if (sessionData.currentPhase >= sessionData.phases.length) { finalizeSession(); } else { runNextPhase(); } };
 
-          function finalizeSession() {
-            sessionData.status = "complete";
-            sessionData.completedAt = new Date().toISOString();
-            // upload happens here — stubbed for now, filled in next
-            Upload.send(sessionData);
-            show("screen-end");
-          }
-
-          document.querySelectorAll("[data-next-step]").forEach((btn) => {
-            btn.onclick = async () => {
-              AudioEngine.resume(); const n = btn.dataset.nextStep;
-              if (n === "baseline") { await MotionDetector.requestPermission(); startBaseline(); }
-              else if (n === "start-trials") { startTrial(); }
-              else { document.querySelectorAll(".onboarding-step").forEach(s => s.classList.remove("active")); document.querySelector(`.onboarding-step[data-step="${n}"]`).classList.add("active"); }
-            };
-          });
-
-          // Audio test (silent-mode functional check)
-          const audioTestBtn = document.getElementById("audio-test-btn");
-          const audioTestConfirm = document.getElementById("audio-test-confirm");
-          const audioTestStatus = document.getElementById("audio-test-status");
-          const audioTestNo = document.getElementById("audio-test-no");
-          if (audioTestBtn) {
-            audioTestBtn.onclick = () => {
-              AudioEngine.resume();
-              // Play three clearly-audible tones so a single dropped sample can't give a false negative
-              AudioEngine.playLow();
-              setTimeout(() => AudioEngine.playLow(), 400);
-              setTimeout(() => AudioEngine.playLow(), 800);
-              audioTestStatus.textContent = "Tone played. Did you hear it?";
-              audioTestConfirm.style.display = "block";
-            };
-          }
-          if (audioTestNo) {
-            audioTestNo.onclick = () => {
-              audioTestStatus.innerHTML = "<strong style='color:var(--accent-yellow)'>On iPhone:</strong> flip the silent switch (side of phone) so no orange shows. <strong>On Android:</strong> raise media volume. Then tap Play Test Tone again.";
-              audioTestConfirm.style.display = "none";
-            };
-          }
+          function finalizeSession() { sessionData.status = "complete"; sessionData.completedAt = new Date().toISOString(); Upload.send(sessionData); show("screen-end"); }
 
           document.getElementById("confirm-trial-btn").onclick = () => { AudioEngine.resume(); confirmTrial(); };
-          document.getElementById("submit-ema-btn").onclick = submitEMA;
-          
           document.getElementById("download-btn").onclick = () => {
-            const b = new Blob([JSON.stringify(sessionData, null, 2)], { type: "application/json" });
-            const u = URL.createObjectURL(b), a = document.createElement("a"); a.href = u;
-            // filename: type_participant_date.json (e.g. paired_P01_2026-04-14.json)
-            a.download = `${sessionData.type}_${sessionData.participantId}_${new Date().toISOString().slice(0, 10)}.json`;
-            a.click(); URL.revokeObjectURL(u);
+            const a = document.createElement("a"), u = URL.createObjectURL(new Blob([JSON.stringify(sessionData, null, 2)], { type: "application/json" }));
+            a.href = u; a.download = `${sessionData.type}_${sessionData.participantId}_${new Date().toISOString().slice(0, 10)}.json`; a.click(); URL.revokeObjectURL(u);
           };
-        }
+        },
+        startCalibration: startBaseline,
+        startTrials: startTrial,
+        submitEMAResponses(responses) { sessionData.data.push(responses); window._epatAdvancePhase(); }
       };
     })();
 
     document.addEventListener("DOMContentLoaded", () => {
-      App.init();
-      // retry any uploads that failed on a previous launch
-      Upload.retryPending();
+      App.init(); Upload.retryPending();
       if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(() => {});
     });
   </script>
