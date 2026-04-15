@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <link rel="manifest" href="manifest.json">
-  <title>Interoception Study</title>
+  <title>Timing & Affect Study</title>
   <style>
     /* --- Monochromatic OLED Design --- */
     :root {
@@ -17,9 +17,9 @@
       --fg: #ffffff; 
       --fg-muted: #8e8e93; 
       
-      /* Pure monochromatic accent */
-      --accent: #ffffff; 
-      --accent-hover: #e5e5ea; 
+      /* Warm coral accent */
+      --accent: #e8716a; 
+      --accent-hover: #d4625b; 
       
       --accent-red: #ff453a; 
       --accent-green: #32d74b;
@@ -70,10 +70,10 @@
     .btn:active { transform: scale(0.97); }
     
     .btn-primary { 
-      background: var(--accent); color: #000; 
-      box-shadow: 0 4px 14px rgba(255, 255, 255, 0.15);
+      background: var(--accent); color: #fff; 
+      box-shadow: 0 4px 14px rgba(232, 113, 106, 0.3);
     }
-    .btn-primary:active { background: var(--accent-hover); box-shadow: 0 2px 8px rgba(255, 255, 255, 0.2); }
+    .btn-primary:active { background: var(--accent-hover); box-shadow: 0 2px 8px rgba(232, 113, 106, 0.4); }
     .btn-primary:disabled { opacity: 0.3; pointer-events: none; box-shadow: none; background: #333; color: #888; }
     
     .btn-secondary {
@@ -98,7 +98,8 @@
 
     /* ---- EMA Specific Styles (The "One Thing" layout) ---- */
     #screen-ema { justify-content: space-between; }
-    .ema-progress { font-family: var(--font-mono); font-size: 0.8rem; color: var(--fg-muted); text-align: center; margin-bottom: 24px; letter-spacing: 0.05em; }
+    .ema-progress { width: 100%; max-width: 340px; margin: 0 auto 28px; height: 3px; background: var(--bg-elevated); border-radius: 2px; overflow: hidden; }
+    .ema-progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1); }
     
     .ema-item-container {
       flex: 1; display: flex; flex-direction: column; justify-content: center;
@@ -107,11 +108,11 @@
     .ema-item-container.fade-out { opacity: 0; transform: translateY(-10px); }
     .ema-item-container.fade-in { opacity: 0; transform: translateY(10px); }
     
-    .ema-question { font-size: 1.5rem; font-weight: 500; color: var(--fg); line-height: 1.3; text-align: center; margin-bottom: 48px; letter-spacing: -0.02em; }
+    .ema-question { font-size: 1.9rem; font-weight: 400; color: var(--fg); line-height: 1.25; text-align: center; margin-bottom: 48px; letter-spacing: -0.03em; }
 
     /* Heavy, tactile slider */
     .slider-group { width: 100%; max-width: 340px; margin: 0 auto; }
-    .slider-val-display { font-family: var(--font-mono); font-size: 2.5rem; font-weight: 500; color: var(--accent); text-align: center; margin-bottom: 24px; }
+    .slider-val-display { font-family: var(--font-mono); font-size: 1.6rem; font-weight: 400; color: var(--accent); text-align: center; margin-bottom: 20px; }
     
     .range-slider {
       -webkit-appearance: none; width: 100%; height: 8px;
@@ -135,8 +136,8 @@
     }
     .bubble:active { transform: scale(0.98); }
     .bubble.selected { 
-      background: var(--accent); border-color: var(--accent); color: #000; 
-      box-shadow: 0 4px 14px rgba(255, 255, 255, 0.15); 
+      background: var(--accent); border-color: var(--accent); color: #fff; 
+      box-shadow: 0 4px 14px rgba(232, 113, 106, 0.3); 
     }
 
     /* ---- Baseline ---- */
@@ -197,7 +198,7 @@
       position: absolute; top: 12px; left: 50%;
       width: 4px; height: 24px; background: var(--accent);
       border-radius: 2px; transform: translateX(-50%);
-      box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+      box-shadow: 0 0 8px rgba(232, 113, 106, 0.6);
     }
 
     .dial-labels {
@@ -245,7 +246,7 @@
       color: var(--fg); font-size: 1rem; cursor: pointer; text-align: center; font-weight: 500;
       transition: all 0.2s;
     }
-    .body-part.selected { background: var(--accent); border-color: var(--accent); color: #000; }
+    .body-part.selected { background: var(--accent); border-color: var(--accent); color: #fff; }
 
     /* ---- Hidden elements ---- */
     #video-feed, #sampling-canvas { position: fixed; top: -9999px; left: -9999px; width: 40px; height: 40px; opacity: 0; pointer-events: none; }
@@ -268,10 +269,11 @@
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 24px;">
         <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
       </svg>
-      <h1>Interoception Study</h1>
-      <h2 id="task-subtitle">Phase Adjustment Task</h2>
+      <h1>Timing & Affect Study</h1>
+      <h2 id="task-subtitle">OSU Affective Science Lab</h2>
+      <div id="day-label" style="display:none; font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;"></div>
       
-      <div class="input-group" style="margin-top: 24px;">
+      <div class="input-group" id="participant-input-group" style="margin-top: 24px;">
         <label class="label" for="participant-input">Participant ID</label>
         <input type="text" id="participant-input" placeholder="e.g. 42" autocomplete="off">
       </div>
@@ -291,7 +293,7 @@
 
   <!-- 3. EMA -->
   <div class="screen" id="screen-ema">
-    <div class="ema-progress" id="ema-progress-text">1 OF 5</div>
+    <div class="ema-progress"><div class="ema-progress-fill" id="ema-progress-fill" style="width:0%"></div></div>
     <div class="ema-item-container" id="ema-single-container">
       <!-- Injected by JS -->
     </div>
@@ -342,8 +344,8 @@
       </div>
       
       <div class="dial-labels">
-        <span>◀ Earlier</span>
-        <span>Later ▶</span>
+        <span>Earlier</span>
+        <span>Later</span>
       </div>
     </div>
 
@@ -383,6 +385,7 @@
       </svg>
       <h1>Session Complete</h1>
       <p>Thank you for your participation.</p>
+      <p id="end-beat-count" style="display:none; font-family: var(--font-mono); font-size: 1rem; color: var(--accent); margin-top: 0;"></p>
     </div>
     <button class="btn btn-secondary btn-block" id="download-btn">Save Local Copy</button>
   </div>
@@ -472,12 +475,12 @@
       let sessionResponses = {};
       const container = document.getElementById("ema-single-container");
       const nextBtn = document.getElementById("ema-next-btn");
-      const progressText = document.getElementById("ema-progress-text");
 
       function renderCurrentItem() {
         container.innerHTML = "";
         const item = activeItems[currentIndex];
-        progressText.textContent = `${currentIndex + 1} OF ${activeItems.length}`;
+        const pct = Math.round(((currentIndex + 1) / activeItems.length) * 100);
+        document.getElementById("ema-progress-fill").style.width = pct + "%";
         
         const qEl = document.createElement("div");
         qEl.className = "ema-question";
@@ -910,7 +913,7 @@
         BeatDetector.setCallbacks({ onBeatCb: null, onFingerChangeCb: null, onSqiUpdateCb: null, onDicroticRejectCb: null, onPPGSampleCb: null });
         
         show("screen-ema");
-        document.getElementById("ema-progress-text").textContent = "CONFIDENCE";
+        document.getElementById("ema-progress-fill").style.width = "100%";
         const container = document.getElementById("ema-single-container");
         container.innerHTML = `
           <div class="ema-question">How confident are you that the sound matched your heartbeat?</div>
@@ -954,7 +957,16 @@
 
           const urlParams = new URLSearchParams(window.location.search);
           const sessionType = urlParams.get('session') || '';
-          if (urlParams.get('id')) document.getElementById('participant-input').value = urlParams.get('id');
+          if (urlParams.get('id')) {
+            document.getElementById('participant-input').value = urlParams.get('id');
+            document.getElementById('participant-input-group').style.display = 'none';
+          }
+          const dayNum = parseInt(urlParams.get('day'));
+          if (dayNum) {
+            const dl = document.getElementById('day-label');
+            dl.textContent = `Day ${dayNum}`;
+            dl.style.display = 'block';
+          }
 
           sessionData = { sessionId: "ses_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8), participantId: "", day: parseInt(urlParams.get('day')) || null, type: "", phases: [], currentPhase: 0, counterbalance: null, startedAt: null, wallClockAnchor: null, perfAnchor: null, device: null, data: [], status: "in_progress" };
 
@@ -998,7 +1010,24 @@
 
           window._epatAdvancePhase = function advancePhase() { sessionData.currentPhase++; if (sessionData.currentPhase >= sessionData.phases.length) { finalizeSession(); } else { runNextPhase(); } };
 
-          function finalizeSession() { sessionData.status = "complete"; sessionData.completedAt = new Date().toISOString(); Upload.send(sessionData); show("screen-end"); }
+          function finalizeSession() {
+            sessionData.status = "complete"; 
+            sessionData.completedAt = new Date().toISOString(); 
+            Upload.send(sessionData);
+            
+            // Compute total beats across baseline + all trials
+            const totalBeats = sessionData.data.reduce((sum, entry) => {
+              if (entry.type === "baseline") return sum + (entry.recordedHR ? entry.recordedHR.length : 0);
+              if (entry.type === "trial") return sum + (entry.qualitySummary ? entry.qualitySummary.totalBeats : 0);
+              return sum;
+            }, 0);
+            if (totalBeats > 0) {
+              document.getElementById("end-beat-count").textContent = `${totalBeats.toLocaleString()} beats contributed to science.`;
+              document.getElementById("end-beat-count").style.display = "block";
+            }
+            
+            show("screen-end"); 
+          }
 
           document.getElementById("confirm-trial-btn").onclick = () => { AudioEngine.resume(); confirmTrial(); };
           document.getElementById("download-btn").onclick = () => {
