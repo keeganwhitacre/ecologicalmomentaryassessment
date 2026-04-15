@@ -250,6 +250,123 @@
 
     /* ---- Hidden elements ---- */
     #video-feed, #sampling-canvas { position: fixed; top: -9999px; left: -9999px; width: 40px; height: 40px; opacity: 0; pointer-events: none; }
+
+    /* ---- Onboarding Session ---- */
+    .ob-progress { width: 100%; max-width: 340px; margin: 0 auto 32px; height: 3px; background: var(--bg-elevated); border-radius: 2px; overflow: hidden; flex-shrink: 0; }
+    .ob-progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.4s cubic-bezier(0.4,0,0.2,1); }
+
+    .consent-scroll {
+      flex: 1; overflow-y: auto; background: var(--bg-surface);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 20px; margin-bottom: 20px; min-height: 0;
+      -webkit-user-select: text; user-select: text;
+      font-size: 0.95rem; line-height: 1.7; color: var(--fg-muted);
+    }
+    .consent-scroll h3 { color: var(--fg); font-size: 1rem; font-weight: 600; margin: 16px 0 6px; text-align: left; }
+    .consent-scroll h3:first-child { margin-top: 0; }
+    .consent-scroll p { font-size: 0.95rem; margin-bottom: 10px; text-align: left; color: var(--fg-muted); }
+    .consent-scroll-hint { font-size: 0.8rem; color: var(--fg-muted); text-align: center; margin-bottom: 12px; flex-shrink: 0; transition: opacity 0.3s; }
+
+    .checkbox-row {
+      display: flex; align-items: flex-start; gap: 14px;
+      margin-bottom: 20px; cursor: pointer; flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent; max-width: 340px; margin-left: auto; margin-right: auto;
+    }
+    .checkbox-row input[type="checkbox"] { width: 24px; height: 24px; flex-shrink: 0; margin-top: 2px; accent-color: var(--accent); cursor: pointer; }
+    .checkbox-row span { font-size: 0.95rem; color: var(--fg-muted); line-height: 1.5; text-align: left; }
+
+    .ob-input { width: 100%; max-width: 340px; margin: 0 auto 20px; display: block; }
+    .ob-input input {
+      width: 100%; padding: 16px; text-align: center;
+      background: var(--bg-surface); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--fg);
+      font-family: var(--font); font-size: 1.05rem; outline: none;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .ob-input input:focus { border-color: var(--accent); background: var(--bg-elevated); }
+
+    .schedule-section { width: 100%; max-width: 340px; margin: 0 auto 28px; }
+    .schedule-label { font-size: 0.8rem; font-weight: 600; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; display: block; }
+    .day-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+    .day-btn {
+      padding: 10px 0; border-radius: 8px;
+      background: var(--bg-surface); border: 1px solid var(--border);
+      color: var(--fg-muted); font-size: 0.78rem; font-weight: 600;
+      cursor: pointer; text-align: center; transition: all 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .day-btn.selected { border-color: var(--accent); background: rgba(232,113,106,0.15); color: var(--accent); }
+    .time-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .time-row-label { width: 76px; font-size: 0.82rem; font-weight: 600; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 0.04em; flex-shrink: 0; }
+    .time-row input[type="time"] {
+      flex: 1; padding: 12px 8px; text-align: center;
+      background: var(--bg-surface); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--fg);
+      font-family: var(--font-mono); font-size: 0.9rem; outline: none;
+      transition: border-color 0.2s;
+    }
+    .time-row input[type="time"]:focus { border-color: var(--accent); }
+    .time-sep { color: var(--fg-muted); font-size: 0.85rem; flex-shrink: 0; }
+
+    .check-list { width: 100%; max-width: 340px; margin: 0 auto 16px; }
+    .check-item {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 16px; background: var(--bg-surface);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      margin-bottom: 8px; transition: border-color 0.3s;
+    }
+    .check-item.pass { border-color: var(--accent-green); }
+    .check-item.fail { border-color: var(--accent-red); }
+    .check-item.testing { border-color: var(--accent); }
+    .check-icon { width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: var(--bg-elevated); font-size: 0.9rem; }
+    .check-item.pass .check-icon { background: rgba(50,215,75,0.15); }
+    .check-item.fail .check-icon { background: rgba(255,69,58,0.15); }
+    .check-info { flex: 1; }
+    .check-title { font-size: 0.95rem; font-weight: 600; color: var(--fg); }
+    .check-status { font-size: 0.8rem; color: var(--fg-muted); margin-top: 2px; }
+    .check-item.pass .check-status { color: var(--accent-green); }
+    .check-item.fail .check-status { color: var(--accent-red); }
+
+    .training-timeline {
+      width: 100%; max-width: 340px; height: 72px; margin: 0 auto 28px;
+      background: var(--bg-surface); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden; flex-shrink: 0;
+    }
+    #training-canvas { width: 100%; height: 100%; display: block; }
+    .training-dial-wrapper {
+      position: relative; width: 240px; height: 240px;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 12px; border-radius: 50%; user-select: none; flex-shrink: 0;
+    }
+    .training-dial-ticks { position: absolute; inset: 0; pointer-events: none; border-radius: 50%; }
+    .training-tick {
+      position: absolute; width: 2px; height: 5px; background: var(--border);
+      top: 7px; left: 50%; transform-origin: 50% 113px; margin-left: -1px;
+    }
+    .training-dial {
+      width: 140px; height: 140px; border-radius: 50%;
+      background: linear-gradient(145deg, #1f1f23, #121214);
+      box-shadow: 8px 8px 16px rgba(0,0,0,0.8), -4px -4px 12px rgba(255,255,255,0.03), inset 0 2px 4px rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      position: relative; touch-action: none; cursor: grab; z-index: 2;
+    }
+    .training-dial:active { cursor: grabbing; }
+    .training-dial-indicator {
+      position: absolute; top: 10px; left: 50%;
+      width: 4px; height: 22px; background: var(--accent);
+      border-radius: 2px; transform: translateX(-50%);
+      box-shadow: 0 0 8px rgba(232,113,106,0.6);
+    }
+    .training-dial-labels {
+      display: flex; justify-content: space-between; width: 240px;
+      margin: 0 auto 20px; font-size: 0.8rem; font-weight: 600;
+      color: var(--fg-muted); text-transform: uppercase; letter-spacing: 0.07em; flex-shrink: 0;
+    }
+    .training-status {
+      text-align: center; font-size: 0.95rem; color: var(--fg-muted);
+      min-height: 1.4em; transition: color 0.3s; flex-shrink: 0; margin-bottom: 8px;
+    }
+    .training-status.aligned { color: var(--accent-green); }
   </style>
 </head>
 <body>
@@ -388,6 +505,132 @@
       <p id="end-beat-count" style="display:none; font-family: var(--font-mono); font-size: 1rem; color: var(--accent); margin-top: 0;"></p>
     </div>
     <button class="btn btn-secondary btn-block" id="download-btn">Save Local Copy</button>
+  </div>
+
+  <!-- ================================================ -->
+  <!-- ONBOARDING SESSION SCREENS                       -->
+  <!-- ================================================ -->
+
+  <!-- OB-1: Consent -->
+  <div class="screen" id="screen-ob-consent">
+    <div class="ob-progress"><div class="ob-progress-fill" style="width:20%"></div></div>
+    <h1>Informed Consent</h1>
+    <p class="consent-scroll-hint" id="ob-consent-hint">↓ Scroll to read</p>
+    <div class="consent-scroll" id="ob-consent-scroll">
+      <h3>1. Purpose</h3>
+      <p>This research investigates individual differences in how people perceive internal body signals such as heartbeats, and how this relates to mood and daily experience.</p>
+      <h3>2. What You Will Do</h3>
+      <p>You will complete brief daily check-ins (about 1 minute each, 3 times per day) for the duration of the study. During in-lab visits, you will complete a task where you adjust an auditory tone to match your heartbeat using a dial. Your phone's rear camera measures your pulse optically through your fingertip using the flashlight. No audio, video, or images of your person are recorded.</p>
+      <h3>3. Risks</h3>
+      <p>Risks are minimal. You may experience mild boredom or fatigue. The camera-based heart rate measurement is non-invasive and poses no physical risk.</p>
+      <h3>4. Confidentiality</h3>
+      <p>All data are stored under a participant ID number with no identifying information. Data are encrypted in transit and stored on secure servers. Your data will not be shared with anyone outside the research team.</p>
+      <h3>5. Voluntary Participation</h3>
+      <p>Participation is entirely voluntary. You may withdraw at any time without penalty. Withdrawing will not affect your relationship with the university or any compensation already earned.</p>
+      <h3>6. Compensation</h3>
+      <p>Compensation details were provided in the recruitment materials. Partial compensation is available for partial completion per the schedule provided by your researcher.</p>
+      <h3>7. Contact</h3>
+      <p>For questions about this study, contact the Affective Science Lab at OSU. For questions about your rights as a research participant, contact the OSU Institutional Review Board.</p>
+    </div>
+    <label class="checkbox-row" id="ob-consent-check-row" style="opacity:0.4; pointer-events:none;">
+      <input type="checkbox" id="ob-consent-check">
+      <span>I have read and understood the above. I voluntarily agree to participate.</span>
+    </label>
+    <div class="ob-input">
+      <input type="text" id="ob-initials" placeholder="Your initials" maxlength="5" autocomplete="off" style="text-transform:uppercase;" disabled>
+    </div>
+    <button class="btn btn-primary btn-block" id="ob-consent-next" disabled>I Consent — Continue</button>
+  </div>
+
+  <!-- OB-2: Scheduling -->
+  <div class="screen" id="screen-ob-schedule">
+    <div class="ob-progress"><div class="ob-progress-fill" style="width:40%"></div></div>
+    <h1>Scheduling</h1>
+    <p style="margin-bottom:24px;">Choose your available days and preferred check-in windows.</p>
+    <div class="schedule-section">
+      <span class="schedule-label">Available days</span>
+      <div class="day-grid" id="ob-day-grid">
+        <div class="day-btn selected" data-day="Mon">Mon</div>
+        <div class="day-btn selected" data-day="Tue">Tue</div>
+        <div class="day-btn selected" data-day="Wed">Wed</div>
+        <div class="day-btn selected" data-day="Thu">Thu</div>
+        <div class="day-btn selected" data-day="Fri">Fri</div>
+        <div class="day-btn selected" data-day="Sat">Sat</div>
+        <div class="day-btn selected" data-day="Sun">Sun</div>
+      </div>
+    </div>
+    <div class="schedule-section">
+      <span class="schedule-label">Check-in time windows</span>
+      <div class="time-row">
+        <span class="time-row-label">Morning</span>
+        <input type="time" id="ob-am-start" value="08:00">
+        <span class="time-sep">–</span>
+        <input type="time" id="ob-am-end" value="10:00">
+      </div>
+      <div class="time-row">
+        <span class="time-row-label">Afternoon</span>
+        <input type="time" id="ob-pm-start" value="13:00">
+        <span class="time-sep">–</span>
+        <input type="time" id="ob-pm-end" value="15:00">
+      </div>
+      <div class="time-row">
+        <span class="time-row-label">Evening</span>
+        <input type="time" id="ob-ev-start" value="19:00">
+        <span class="time-sep">–</span>
+        <input type="time" id="ob-ev-end" value="21:00">
+      </div>
+    </div>
+    <div style="flex:1; min-height:16px;"></div>
+    <button class="btn btn-primary btn-block" id="ob-schedule-next">Continue</button>
+  </div>
+
+  <!-- OB-3: Device Check -->
+  <div class="screen" id="screen-ob-device">
+    <div class="ob-progress"><div class="ob-progress-fill" style="width:60%"></div></div>
+    <h1>Device Check</h1>
+    <p style="margin-bottom:24px;">We'll confirm your device supports the task. For multi-lens phones, cover the lens <em>closest</em> to the flashlight.</p>
+    <div class="check-list">
+      <div class="check-item" id="ob-check-camera"><div class="check-icon">📷</div><div class="check-info"><div class="check-title">Camera</div><div class="check-status" id="ob-check-camera-status">Waiting…</div></div></div>
+      <div class="check-item" id="ob-check-torch"><div class="check-icon">🔦</div><div class="check-info"><div class="check-title">Flashlight</div><div class="check-status" id="ob-check-torch-status">Waiting…</div></div></div>
+      <div class="check-item" id="ob-check-audio"><div class="check-icon">🔊</div><div class="check-info"><div class="check-title">Audio</div><div class="check-status" id="ob-check-audio-status">Waiting…</div></div></div>
+      <div class="check-item" id="ob-check-signal"><div class="check-icon">💓</div><div class="check-info"><div class="check-title">PPG Signal</div><div class="check-status" id="ob-check-signal-status">Waiting…</div></div></div>
+    </div>
+    <p id="ob-device-status" style="text-align:center; font-size:0.9rem; min-height:1.4em; color:var(--fg-muted);"></p>
+    <div style="flex:1; min-height:16px;"></div>
+    <button class="btn btn-primary btn-block" id="ob-device-start">Run Checks</button>
+    <button class="btn btn-primary btn-block" id="ob-device-next" style="display:none; margin-top:12px;">Continue</button>
+    <button class="btn btn-secondary btn-block" id="ob-device-retry" style="display:none; margin-top:8px;">Retry</button>
+  </div>
+
+  <!-- OB-4: Task Training -->
+  <div class="screen" id="screen-ob-training">
+    <div class="ob-progress"><div class="ob-progress-fill" style="width:80%"></div></div>
+    <h1>Learn the Task</h1>
+    <p style="margin-bottom:16px;">A simulated heartbeat plays below. Rotate the dial to move the tone earlier or later until it lands on each beat.</p>
+    <div class="training-timeline"><canvas id="training-canvas"></canvas></div>
+    <div class="training-dial-wrapper">
+      <div class="training-dial-ticks" id="training-dial-ticks"></div>
+      <div class="training-dial" id="training-dial"><div class="training-dial-indicator"></div></div>
+    </div>
+    <div class="training-dial-labels"><span>Earlier</span><span>Later</span></div>
+    <p class="training-status" id="training-status">Rotate the dial to align the tone with the beats</p>
+    <div style="flex:1; min-height:8px;"></div>
+    <button class="btn btn-primary btn-block" id="ob-training-next" disabled>Continue</button>
+  </div>
+
+  <!-- OB-5: Complete -->
+  <div class="screen" id="screen-ob-complete">
+    <div class="ob-progress"><div class="ob-progress-fill" style="width:100%"></div></div>
+    <div style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:24px;">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+        <polyline points="22 4 12 14.01 9 11.01"/>
+      </svg>
+      <h1>You're All Set</h1>
+      <p>Setup is complete. Your check-in schedule has been saved. Your first session begins now.</p>
+    </div>
+    <button class="btn btn-primary btn-block" id="ob-complete-pat">Begin First Session →</button>
+    <button class="btn btn-secondary btn-block" id="ob-complete-download" style="margin-top:10px;">Save Setup Data</button>
   </div>
 
   <script src="epat-core.js"></script>
@@ -608,8 +851,343 @@
     })();
 
     // ============================================================
-    // TASK LOGIC & UI
+    // ONBOARDING SESSION MODULE (?session=onboarding)
     // ============================================================
+    const OnboardingSession = (function() {
+      let obData = {};
+
+      function show(id) { // reuse App's show via closure — but App isn't defined yet, use global
+        if (window._epatShow) window._epatShow(id);
+      }
+
+      // --- Consent screen ---
+      function initConsent() {
+        const scroll = document.getElementById("ob-consent-scroll");
+        const hint = document.getElementById("ob-consent-hint");
+        const checkRow = document.getElementById("ob-consent-check-row");
+        const check = document.getElementById("ob-consent-check");
+        const initials = document.getElementById("ob-initials");
+        const nextBtn = document.getElementById("ob-consent-next");
+
+        scroll.addEventListener("scroll", () => {
+          const atBottom = scroll.scrollHeight - scroll.scrollTop <= scroll.clientHeight + 40;
+          if (atBottom) {
+            checkRow.style.opacity = "1"; checkRow.style.pointerEvents = "auto";
+            initials.disabled = false; hint.style.opacity = "0";
+          }
+        });
+
+        function updateNext() {
+          nextBtn.disabled = !(check.checked && initials.value.trim().length >= 1);
+        }
+        check.addEventListener("change", updateNext);
+        initials.addEventListener("input", updateNext);
+
+        nextBtn.onclick = () => {
+          obData.consent = { agreed: true, initials: initials.value.trim().toUpperCase(), timestamp: new Date().toISOString() };
+          show("screen-ob-schedule");
+        };
+      }
+
+      // --- Schedule screen ---
+      function initSchedule() {
+        const grid = document.getElementById("ob-day-grid");
+        grid.querySelectorAll(".day-btn").forEach(btn => {
+          btn.addEventListener("click", () => btn.classList.toggle("selected"));
+        });
+        document.getElementById("ob-schedule-next").onclick = () => {
+          const days = [...grid.querySelectorAll(".day-btn.selected")].map(b => b.dataset.day);
+          obData.schedule = {
+            availableDays: days,
+            windows: {
+              morning:   { start: document.getElementById("ob-am-start").value, end: document.getElementById("ob-am-end").value },
+              afternoon: { start: document.getElementById("ob-pm-start").value, end: document.getElementById("ob-pm-end").value },
+              evening:   { start: document.getElementById("ob-ev-start").value, end: document.getElementById("ob-ev-end").value },
+            }
+          };
+          show("screen-ob-device");
+        };
+      }
+
+      // --- Device check screen ---
+      function initDevice() {
+        const checks = { camera: false, torch: false, audio: false, signal: false };
+
+        function setCheck(id, state, msg) {
+          const el = document.getElementById("ob-check-" + id);
+          const st = document.getElementById("ob-check-" + id + "-status");
+          el.className = "check-item" + (state ? " " + state : "");
+          if (msg) st.textContent = msg;
+        }
+
+        document.getElementById("ob-device-start").onclick = async () => {
+          document.getElementById("ob-device-start").style.display = "none";
+          document.getElementById("ob-device-status").textContent = "Running checks…";
+
+          // Camera
+          try {
+            setCheck("camera", "testing", "Requesting access…");
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+            stream.getTracks().forEach(t => t.stop());
+            checks.camera = true; setCheck("camera", "pass", "Access granted");
+          } catch(e) { setCheck("camera", "fail", "Permission denied"); }
+
+          // Torch
+          try {
+            setCheck("torch", "testing", "Testing flashlight…");
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+            const track = stream.getVideoTracks()[0];
+            if (track.getCapabilities && track.getCapabilities().torch) {
+              await track.applyConstraints({ advanced: [{ torch: true }] });
+              await new Promise(r => setTimeout(r, 400));
+              await track.applyConstraints({ advanced: [{ torch: false }] });
+              checks.torch = true; setCheck("torch", "pass", "Flashlight available");
+            } else { setCheck("torch", "fail", "Not available on this device"); }
+            stream.getTracks().forEach(t => t.stop());
+          } catch(e) { setCheck("torch", "fail", "Error: " + e.message); }
+
+          // Audio
+          try {
+            setCheck("audio", "testing", "Playing test tone…");
+            const actx = new (window.AudioContext || window.webkitAudioContext)();
+            await actx.resume();
+            const osc = actx.createOscillator(), gain = actx.createGain();
+            osc.connect(gain); gain.connect(actx.destination);
+            gain.gain.setValueAtTime(0.15, actx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + 0.2);
+            osc.start(); osc.stop(actx.currentTime + 0.2);
+            await new Promise(r => setTimeout(r, 300));
+            actx.close();
+            checks.audio = true; setCheck("audio", "pass", "Audio OK");
+          } catch(e) { setCheck("audio", "fail", "Audio error"); }
+
+          // PPG Signal — use BeatDetector from epat-core
+          setCheck("signal", "testing", "Place finger on camera…");
+          const statusEl = document.getElementById("ob-device-status");
+          statusEl.textContent = "Place your finger on the camera and flashlight…";
+          let beatCount = 0;
+          await new Promise(resolve => {
+            const timeout = setTimeout(() => { setCheck("signal", "fail", "No signal — try again"); resolve(); }, 20000);
+            BeatDetector.start({
+              video: document.getElementById("video-feed"),
+              canvas: document.getElementById("sampling-canvas"),
+              onBeatCb: (beat) => {
+                beatCount++;
+                setCheck("signal", "testing", `Detecting… ${beatCount} beats`);
+                if (beatCount >= 5) {
+                  clearTimeout(timeout);
+                  checks.signal = true;
+                  setCheck("signal", "pass", `Signal confirmed — ${Math.round(beat.averageBPM)} BPM`);
+                  BeatDetector.stop();
+                  resolve();
+                }
+              },
+              onFingerChangeCb: (p) => {
+                statusEl.textContent = p ? "Finger detected, measuring…" : "Place finger on camera and flashlight…";
+              }
+            });
+          });
+
+          obData.deviceChecks = { ...checks };
+          const allPass = Object.values(checks).every(v => v);
+          statusEl.textContent = allPass ? "All checks passed." : "Some checks failed — you may still continue.";
+          statusEl.style.color = allPass ? "var(--accent-green)" : "var(--fg-muted)";
+          document.getElementById("ob-device-next").style.display = "block";
+          if (!allPass) document.getElementById("ob-device-retry").style.display = "block";
+        };
+
+        document.getElementById("ob-device-retry").onclick = () => {
+          ["camera","torch","audio","signal"].forEach(id => setCheck(id, "", "Waiting…"));
+          document.getElementById("ob-device-status").textContent = "";
+          document.getElementById("ob-device-next").style.display = "none";
+          document.getElementById("ob-device-retry").style.display = "none";
+          document.getElementById("ob-device-start").style.display = "block";
+        };
+
+        document.getElementById("ob-device-next").onclick = () => show("screen-ob-training");
+      }
+
+      // --- Task Training screen ---
+      function initTraining() {
+        const SIM_BPM = 65;
+        const SIM_PERIOD_MS = (60 / SIM_BPM) * 1000;
+        const ALIGN_THRESHOLD = 0.12;
+        const ALIGN_HOLD_MS = 2000;
+
+        let dialAngle = 0, dialDragging = false, dialCx = 0, dialCy = 0, lastDialAngle = 0;
+        let knobValue = 0;
+        let simStartTime = null, animFrameId = null;
+        let alignedSince = null, gateUnlocked = false;
+        let lastScheduledBeat = -1;
+        let trainingACtx = null;
+
+        const canvas = document.getElementById("training-canvas");
+        const ctx = canvas.getContext("2d");
+        const statusEl = document.getElementById("training-status");
+        const nextBtn = document.getElementById("ob-training-next");
+        const dialEl = document.getElementById("training-dial");
+
+        // Ticks
+        const tickContainer = document.getElementById("training-dial-ticks");
+        for (let i = 0; i < 60; i++) {
+          const t = document.createElement("div"); t.className = "training-tick";
+          t.style.transform = `rotate(${i * 6}deg)`;
+          if (i % 2 === 0) t.style.height = "8px";
+          if (i % 15 === 0) { t.style.height = "12px"; t.style.background = "var(--fg-muted)"; }
+          tickContainer.appendChild(t);
+        }
+
+        // Dial interaction
+        dialEl.addEventListener("pointerdown", (e) => {
+          e.preventDefault(); dialDragging = true;
+          const r = dialEl.getBoundingClientRect();
+          dialCx = r.left + r.width / 2; dialCy = r.top + r.height / 2;
+          lastDialAngle = Math.atan2(e.clientY - dialCy, e.clientX - dialCx);
+          dialEl.setPointerCapture(e.pointerId);
+        }, { passive: false });
+
+        window.addEventListener("pointermove", (e) => {
+          if (!dialDragging) return; e.preventDefault();
+          const a = Math.atan2(e.clientY - dialCy, e.clientX - dialCx);
+          let d = a - lastDialAngle;
+          if (d > Math.PI) d -= 2 * Math.PI;
+          if (d < -Math.PI) d += 2 * Math.PI;
+          dialAngle += d; lastDialAngle = a;
+          dialEl.style.transform = `rotate(${dialAngle}rad)`;
+          let raw = (dialAngle / Math.PI) % 2;
+          if (raw > 1) raw -= 2; if (raw < -1) raw += 2;
+          knobValue = raw;
+        }, { passive: false });
+
+        window.addEventListener("pointerup", () => { dialDragging = false; });
+
+        function playTone(delayS) {
+          if (!trainingACtx) trainingACtx = new (window.AudioContext || window.webkitAudioContext)();
+          if (trainingACtx.state === "suspended") trainingACtx.resume();
+          const when = trainingACtx.currentTime + Math.max(0, delayS);
+          const osc = trainingACtx.createOscillator(), gain = trainingACtx.createGain();
+          osc.connect(gain); gain.connect(trainingACtx.destination);
+          osc.frequency.value = 440;
+          gain.gain.setValueAtTime(0, when);
+          gain.gain.linearRampToValueAtTime(0.18, when + 0.005);
+          gain.gain.exponentialRampToValueAtTime(0.001, when + 0.08);
+          osc.start(when); osc.stop(when + 0.1);
+        }
+
+        function draw(ts) {
+          if (!simStartTime) simStartTime = ts;
+          const elapsed = ts - simStartTime;
+          const dpr = window.devicePixelRatio || 1;
+          if (canvas.width !== canvas.clientWidth * dpr) {
+            canvas.width = canvas.clientWidth * dpr;
+            canvas.height = canvas.clientHeight * dpr;
+          }
+          const W = canvas.width, H = canvas.height;
+          ctx.clearRect(0, 0, W, H);
+
+          const beatCount = Math.floor(elapsed / SIM_PERIOD_MS);
+
+          // Beat marker lines
+          ctx.strokeStyle = "rgba(142,142,147,0.3)";
+          ctx.lineWidth = 1.5 * dpr;
+          for (let i = -1; i <= 3; i++) {
+            const beatTime = (beatCount + i) * SIM_PERIOD_MS;
+            const x = (1 - (elapsed - beatTime) / SIM_PERIOD_MS) * W;
+            if (x < 0 || x > W) continue;
+            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+          }
+
+          // Schedule next tone
+          const toneOffset = (SIM_PERIOD_MS / 2) * knobValue;
+          const nextBeatMs = (beatCount + 1) * SIM_PERIOD_MS;
+          const toneFireMs = nextBeatMs + toneOffset;
+          const msUntilTone = toneFireMs - elapsed;
+          if (lastScheduledBeat !== beatCount && msUntilTone > 0 && msUntilTone < SIM_PERIOD_MS) {
+            playTone(msUntilTone / 1000);
+            lastScheduledBeat = beatCount;
+          }
+
+          // Tone marker
+          const toneX = (1 - (elapsed - toneFireMs) / SIM_PERIOD_MS) * W;
+          if (toneX >= 0 && toneX <= W) {
+            ctx.strokeStyle = "rgba(232,113,106,0.9)";
+            ctx.lineWidth = 2.5 * dpr;
+            ctx.beginPath(); ctx.moveTo(toneX, 0); ctx.lineTo(toneX, H); ctx.stroke();
+            ctx.fillStyle = "rgba(232,113,106,0.9)";
+            ctx.font = `${9 * dpr}px ui-monospace, monospace`;
+            ctx.fillText("TONE", toneX + 4 * dpr, 13 * dpr);
+          }
+
+          // Alignment check
+          const isAligned = Math.abs(knobValue / 2) < ALIGN_THRESHOLD;
+          if (isAligned) {
+            if (!alignedSince) alignedSince = ts;
+            const held = ts - alignedSince;
+            const frac = Math.min(1, held / ALIGN_HOLD_MS);
+            ctx.strokeStyle = "rgba(50,215,75,0.8)";
+            ctx.lineWidth = 3 * dpr;
+            ctx.beginPath();
+            ctx.arc(W / 2, H / 2, 16 * dpr, -Math.PI / 2, -Math.PI / 2 + frac * 2 * Math.PI);
+            ctx.stroke();
+            statusEl.textContent = held >= ALIGN_HOLD_MS ? "Aligned — well done!" : "Hold it there…";
+            statusEl.className = "training-status aligned";
+            if (held >= ALIGN_HOLD_MS && !gateUnlocked) { gateUnlocked = true; nextBtn.disabled = false; }
+          } else {
+            alignedSince = null;
+            statusEl.textContent = "Rotate the dial to align the tone with the beats";
+            statusEl.className = "training-status";
+          }
+
+          animFrameId = requestAnimationFrame(draw);
+        }
+
+        // Start/stop animation when screen activates
+        const observer = new MutationObserver(() => {
+          const active = document.getElementById("screen-ob-training").classList.contains("active");
+          if (active && !animFrameId) {
+            simStartTime = null; lastScheduledBeat = -1; animFrameId = requestAnimationFrame(draw);
+          } else if (!active && animFrameId) {
+            cancelAnimationFrame(animFrameId); animFrameId = null;
+          }
+        });
+        observer.observe(document.getElementById("screen-ob-training"), { attributes: true, attributeFilter: ["class"] });
+
+        nextBtn.onclick = () => {
+          cancelAnimationFrame(animFrameId); animFrameId = null;
+          if (trainingACtx) { trainingACtx.close(); trainingACtx = null; }
+          show("screen-ob-complete");
+        };
+      }
+
+      // --- Complete screen ---
+      function initComplete(pid) {
+        document.getElementById("ob-complete-pat").onclick = () => {
+          // Transition to PAT: reuse existing session routing
+          obData.completedAt = new Date().toISOString();
+          Upload.send({ ...obData, type: "onboarding", participantId: pid,
+            sessionId: "ob_" + Date.now() + "_" + Math.random().toString(36).slice(2,6) });
+          // Re-init as a pat_only session then kick off
+          window._epatStartPAT();
+        };
+        document.getElementById("ob-complete-download").onclick = () => {
+          const a = document.createElement("a");
+          const blob = new Blob([JSON.stringify({ ...obData, type: "onboarding", participantId: pid }, null, 2)], { type: "application/json" });
+          a.href = URL.createObjectURL(blob);
+          a.download = `onboarding_${pid}_${new Date().toISOString().slice(0,10)}.json`;
+          a.click();
+        };
+      }
+
+      return {
+        start(pid) {
+          obData = { participantId: pid, startedAt: new Date().toISOString() };
+          initConsent(); initSchedule(); initDevice(); initTraining(); initComplete(pid);
+          show("screen-ob-consent");
+        }
+      };
+    })();
+
+
     const App = (function () {
       const NUM_TRIALS = 20, NUM_PRACTICES = 2, BODY_MAP_EVERY = 4, BASELINE_DURATION_S = 120;
       const KNOB_VALUE_RANGE = 1.0;
@@ -673,6 +1251,8 @@
         screens.active = targetScreen;
         if (screens.active) screens.active.classList.add("active");
       }
+      // Expose for OnboardingSession
+      window._epatShow = show;
 
       function initDial() {
         dialEl = document.getElementById("rotary-dial");
@@ -971,7 +1551,16 @@
           sessionData = { sessionId: "ses_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8), participantId: "", day: parseInt(urlParams.get('day')) || null, type: "", phases: [], currentPhase: 0, counterbalance: null, startedAt: null, wallClockAnchor: null, perfAnchor: null, device: null, data: [], status: "in_progress" };
 
           // Routing Fix: This properly routes ?session=emaafternoon to the right logic
-          if (sessionType.startsWith('ema')) {
+          if (sessionType === 'onboarding') {
+            sessionData.type = "onboarding";
+            document.getElementById('task-subtitle').textContent = "Study Setup";
+            // _epatStartPAT: called by OnboardingSession when participant proceeds to PAT
+            window._epatStartPAT = () => {
+              sessionData.type = "pat_only"; sessionData.phases = ['pat'];
+              sessionData.startedAt = sessionData.startedAt || new Date().toISOString();
+              runNextPhase();
+            };
+          } else if (sessionType.startsWith('ema')) {
             sessionData.type = "ema_only"; sessionData.phases = [sessionType];
             document.getElementById('task-subtitle').textContent = sessionType === 'emamorning' ? "Morning Check-In" : sessionType === 'emaevening' ? "Evening Check-In" : "Afternoon Check-In";
           } else if (sessionType.startsWith('pair')) {
@@ -989,8 +1578,10 @@
             sessionData.startedAt = new Date().toISOString(); 
             sessionData.wallClockAnchor = Date.now(); 
             sessionData.perfAnchor = performance.now();
-            sessionData.device = collectDeviceMetadata(); // RESTORED
-            AudioEngine.resume(); runNextPhase();
+            sessionData.device = collectDeviceMetadata();
+            AudioEngine.resume();
+            if (sessionType === 'onboarding') { OnboardingSession.start(pid); }
+            else { runNextPhase(); }
           };
 
           function runNextPhase() {
