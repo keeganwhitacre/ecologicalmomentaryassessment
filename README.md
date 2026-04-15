@@ -19,7 +19,6 @@ The application is a single HTML file (`index.html`) with all session types rout
 | `index.html` | The complete task application. Routes to onboarding, PAT, EMA, or paired sessions via `?session=` parameter. |
 | `validation.html` | Researcher-facing tool for validating the browser PPG signal against external hardware (e.g., CNAP, ECG). Records beat timestamps, sync markers, and audio tone events for offline Bland-Altman analysis. |
 | `epat-core.js` | Shared signal processing modules: `BeatDetector`, `WabpDetector`, `AudioEngine`, `MotionDetector`, `WakeLockCtrl`. |
-| `manifest.json` / `sw.js` | PWA configuration for home-screen installation. |
 
 ### Session Types & URL Parameters
 
