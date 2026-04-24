@@ -357,18 +357,37 @@
       }
 
       for (const cam of ranked) {
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              deviceId: { exact: cam.deviceId },
-              width:  { ideal: 640 },
-              height: { ideal: 480 },
-              frameRate: { ideal: 60, max: 120 }
-            }
-          });
-          track = stream.getVideoTracks()[0];
-          // try torch
+        let streamSuccess = false;
+        
+        // The Waterfall: Try strict 60, then strict 30, then fallback to anything
+        const frameRateFallbacks = [
+          { exact: 60 },
+          { exact: 30 },
+          { ideal: 30 } 
+        ];
+
+        for (const fpsTarget of frameRateFallbacks) {
           try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: {
+                deviceId: { exact: cam.deviceId },
+                width:  { ideal: 640 },
+                height: { ideal: 480 },
+                frameRate: fpsTarget
+              }
+            });
+            streamSuccess = true;
+            break; // We successfully locked a framerate, stop trying
+          } catch (e) {
+            // Phone rejected this framerate constraint, loop and try the next one
+          }
+        }
+
+        if (!streamSuccess) continue; // Move to the next physical lens if all fallbacks failed
+
+        track = stream.getVideoTracks()[0];
+        // try torch
+        try {
             const caps = track.getCapabilities ? track.getCapabilities() : {};
             if (caps.torch) {
               await track.applyConstraints({ advanced: [{ torch: true }] });
