@@ -690,7 +690,7 @@ function logLine(cls, msg) {
 
 // ── SQI ──
 function handleSqi(sqi) {
-  currentSqi = sqi;
+  // currentSqi = sqi;
   const now = performance.now();
   if (lastSqiTime > 0 && sqi < SQI_WARN) sqiBadSec += (now - lastSqiTime) / 1000;
   lastSqiTime = now;
@@ -865,15 +865,21 @@ async function startRecording() {
         });
       }
     },
-    onSqiUpdateCb: (sqi, sqiGreen, activeChannel) => {
-      // Log if a swap happened mid-session
+        onSqiUpdateCb: (sqi, sqiGreen, activeChannel) => {
+      // 1. Log if a swap happened mid-session
       if (activeChannel !== currentActiveChannel && isRecording) {
         const elapsed = ((performance.now() - sessionStartTime) / 1000).toFixed(1);
         logLine('ev-flag', `[${elapsed}s] SWAP TO ${activeChannel.toUpperCase()}`);
       }
       currentActiveChannel = activeChannel;
+      
+      // 2. Safely store BOTH values so the CSV captures them properly
+      currentSqi = sqi; 
       currentSqiGreen = sqiGreen || 0;
-      handleSqi(activeChannel === 'green' ? sqiGreen : sqi); // Show the active SQI in the UI
+      
+      // 3. Update the UI and tracking stats using ONLY the winner's SQI
+      const displaySqi = activeChannel === 'green' ? currentSqiGreen : currentSqi;
+      handleSqi(displaySqi); 
     },
     onDicroticRejectCb: (info) => {
       dicroticList.push(info);
