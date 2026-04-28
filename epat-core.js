@@ -38,7 +38,7 @@
  *   any switching decision.
  *
  * v5 CALIBRATION:
- *   after finger detection, a 2s settling window is enforced before any evaluation
+ *   after finger detection, a 4.5s settling window is enforced before baselines are locked.
  *   (the HP filter at 0.67 Hz has a time constant of ~0.24s; 5τ ≈ 1.2s, so 2s
  *   gives comfortable margin for the transient ring-down). then a 1s measurement
  *   window accumulates filtered pp for both channels. the winner is the channel
@@ -201,11 +201,28 @@
     const FINGER_BRIGHTNESS_MIN = 0.15, FINGER_BRIGHTNESS_MAX = 0.98, FINGER_RED_DOMINANCE = 0.38;
 
     // --- calibration & switching parameters ---
-    // settling: how long after finger detection before any pp evaluation
-    const CAL_SETTLE_MS    = 2000;
-    // measurement: how long to accumulate pp samples for calibration comparison
-    const CAL_MEASURE_MS   = 1000;
-    // failover: active channel's pp must fall below this fraction of its calibration baseline
+    // CAL_SETTLE_MS: how long after finger detection before baselines are locked.
+    // must be long enough for two things to clear:
+    //   (1) HP filter transient: at 0.67 Hz cutoff, 5τ ≈ 1.2s. 
+    //   (2) SQI rolling window: computeFilteredPP uses a 2s window, so the first
+    //       clean SQI reading requires 2s of post-transient data in the buffer.
+    //   → 4.5s covers both with margin. at 4.5s the oldest sample in the 2s window
+    //     is from t=2.5s, which is post-transient on every device tested.
+    //
+    // there is no 'measuring' phase and no calibration winner comparison.
+    // channel selection at startup is not meaningful because:
+    //   - both channels have nearly equal SQI at rest during the settle window
+    //   - the better channel only becomes apparent under real-world conditions
+    //   - ambient light, temperature, and posture determine which channel wins
+    //   - a comparison during a calm 1s window gets this wrong as often as right
+    //
+    // instead: always start on RED (most robust default — torch is optimised for red
+    // and it is unaffected by ambient light changes), then let the failover mechanism
+    // discover green if it genuinely proves better over 2+ consecutive SQI checks.
+    // each channel gets its own per-channel baseline (self-referenced, not compared),
+    // so transient spikes affect only that channel's own threshold, not the decision.
+    const CAL_SETTLE_MS    = 4500;
+    // failover: active channel's pp must fall below this fraction of its own baseline
     const FAILOVER_DROP    = 0.40;
     // backup must have at least this fraction of its own baseline to be considered viable
     const BACKUP_VIABLE    = 0.25;
@@ -250,14 +267,13 @@
     let wabpGreen = makeWabpDetector();
 
     // --- channel state machine ---
-    // phases: 'settling' -> 'measuring' -> 'locked'
+    // phases: 'settling' → 'locked'
+    // no measuring/winner phase — see CAL_SETTLE_MS comment above.
     let calPhase = 'settling';
-    let calPhaseStartTime = 0;           // when current phase began (performance.now())
-    let calMeasureRedPp   = [];          // pp samples accumulated during measure phase
-    let calMeasureGreenPp = [];
-    let activeChannel     = 'red';       // default until calibration completes
-    let redBaseline       = 0;           // calibration-locked pp baseline for red
-    let greenBaseline     = 0;           // calibration-locked pp baseline for green
+    let calPhaseStartTime = 0;           // when settling began (performance.now())
+    let activeChannel     = 'red';       // always start on red; failover discovers green
+    let redBaseline       = 0;           // per-channel pp baseline set at lock time
+    let greenBaseline     = 0;
     let failoverCounter   = 0;           // consecutive checks below threshold
 
     // --- frame timing diagnostics ---
@@ -322,15 +338,11 @@
           fingerPresent = looksLikeFinger;
           fingerDebounceCount = 0;
           if (fingerPresent) {
-            // finger placed: reset calibration state machine
+            // finger placed: restart settle timer. keep WABP running —
+            // if this is a re-placement, existing thresholds are still valid.
             calPhase = 'settling';
             calPhaseStartTime = performance.now();
-            calMeasureRedPp = [];
-            calMeasureGreenPp = [];
             failoverCounter = 0;
-            // NOTE: we do NOT reset WABP here — if this is a re-placement during a
-            // session, both detectors keep their learned thresholds. if signal is truly
-            // new (first placement), they're already reset from start().
           }
           if (onFingerChange) onFingerChange(fingerPresent);
         }
@@ -371,63 +383,41 @@
 
     // ── calibration state machine ────────────────────────────
     // called once per SQI interval while finger is present.
-    // 'settling' → wait 2s for HP filter transient to die out
-    // 'measuring' → accumulate 1s of filtered pp samples for both channels
-    // 'locked' → calibration done; baseline values are set; run failover logic
+    // 'settling' → wait CAL_SETTLE_MS for filter transient + SQI window to clear
+    // 'locked'   → baselines set; run failover logic every SQI check
     function updateCalibrationAndSwitcher(now, ppRed, ppGreen) {
       if (calPhase === 'settling') {
         if (now - calPhaseStartTime >= CAL_SETTLE_MS) {
-          calPhase = 'measuring';
-          calPhaseStartTime = now;
-          calMeasureRedPp = [];
-          calMeasureGreenPp = [];
+          // first clean SQI reading — lock per-channel baselines and start on red.
+          // if either channel has zero signal at lock time (finger not fully placed),
+          // use a small non-zero floor so the threshold maths don't collapse.
+          redBaseline   = ppRed   > 0 ? ppRed   : 1e-6;
+          greenBaseline = ppGreen > 0 ? ppGreen : 1e-6;
+          activeChannel = 'red';
+          failoverCounter = 0;
+          calPhase = 'locked';
         }
         return; // no switching during settle
       }
 
-      if (calPhase === 'measuring') {
-        calMeasureRedPp.push(ppRed);
-        calMeasureGreenPp.push(ppGreen);
-
-        if (now - calPhaseStartTime >= CAL_MEASURE_MS) {
-          // measurement window complete — pick the winner
-          const avgRed   = calMeasureRedPp.reduce((a, b) => a + b, 0) / calMeasureRedPp.length;
-          const avgGreen = calMeasureGreenPp.reduce((a, b) => a + b, 0) / calMeasureGreenPp.length;
-
-          redBaseline   = avgRed   > 0 ? avgRed   : 1e-6;
-          greenBaseline = avgGreen > 0 ? avgGreen : 1e-6;
-
-          activeChannel = avgGreen > avgRed ? 'green' : 'red';
-          failoverCounter = 0;
-          calPhase = 'locked';
-          // recentPeriods is empty at first lock — no prior period to carry forward.
-          // switchStabPeriodMs stays 0 (inactive) until the first actual failover.
-          // both WABP instances have been running since t=0; no reset needed.
-          // lastBeat times are already initialised.
-        }
-        return; // no switching during measurement
-      }
-
-      // calPhase === 'locked' — evaluate failover
+      // calPhase === 'locked' — evaluate failover every SQI check
       if (activeChannel === 'red') {
-        const activeOk  = ppRed   >= redBaseline   * FAILOVER_DROP;
-        const backupOk  = ppGreen >= greenBaseline  * BACKUP_VIABLE;
+        const activeOk = ppRed   >= redBaseline   * FAILOVER_DROP;
+        const backupOk = ppGreen >= greenBaseline * BACKUP_VIABLE;
         if (!activeOk && backupOk) {
           failoverCounter++;
           if (failoverCounter >= ANTITHRASH_COUNT) {
             activeChannel = 'green';
-            greenBaseline = ppGreen > 0 ? ppGreen : greenBaseline; // re-anchor to current
+            greenBaseline = ppGreen > 0 ? ppGreen : greenBaseline; // re-anchor baseline
             failoverCounter = 0;
-            // arm stabilization: use last known period as gate reference until
-            // recentPeriods refills. if averagePeriod is 0 (no beats yet), skip.
             if (averagePeriod > 0) switchStabPeriodMs = averagePeriod * 1000;
           }
         } else {
           failoverCounter = 0;
         }
       } else {
-        const activeOk  = ppGreen >= greenBaseline * FAILOVER_DROP;
-        const backupOk  = ppRed   >= redBaseline   * BACKUP_VIABLE;
+        const activeOk = ppGreen >= greenBaseline * FAILOVER_DROP;
+        const backupOk = ppRed   >= redBaseline   * BACKUP_VIABLE;
         if (!activeOk && backupOk) {
           failoverCounter++;
           if (failoverCounter >= ANTITHRASH_COUNT) {
@@ -690,7 +680,6 @@
 
         lastSqiTime = 0; currentSqiRed = 0; currentSqiGreen = 0;
         calPhase = 'settling'; calPhaseStartTime = 0;
-        calMeasureRedPp = []; calMeasureGreenPp = [];
         activeChannel = 'red'; redBaseline = 0; greenBaseline = 0;
         failoverCounter = 0;
 
