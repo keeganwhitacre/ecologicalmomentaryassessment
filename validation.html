@@ -571,7 +571,11 @@ const { WakeLockCtrl, BeatDetector, AudioEngine, MotionDetector } = window.ePATC
 
 // ── Constants ──
 const IBI_THRESHOLD = 0.30;
-const SQI_GOOD = 0.008, SQI_WARN = 0.003;
+// SQI is now filtered peak-to-peak (not raw perfusion index).
+// Typical steady-state values: red ~0.004–0.010, green ~0.0002–0.001.
+// Thresholds below are conservative floors for "signal present".
+// They are used only for the badge colour; switching uses relative baselines.
+const SQI_GOOD = 0.003, SQI_WARN = 0.001;
 const WAVE_MAX = 200;
 
 // ── State ──
@@ -689,14 +693,14 @@ function logLine(cls, msg) {
 }
 
 // ── SQI ──
-function handleSqi(sqi) {
-  // currentSqi = sqi;
+function handleSqi(sqi, tag) {
   const now = performance.now();
   if (lastSqiTime > 0 && sqi < SQI_WARN) sqiBadSec += (now - lastSqiTime) / 1000;
   lastSqiTime = now;
   sqiSeries.push({ time: now, sqi: Math.round(sqi * 100000) / 100000 });
-  const pct = (sqi * 100).toFixed(2);
-  ui.sqiBadge.textContent = `SQI ${pct}%`;
+  // display as scientific notation for filtered-pp scale (values ~0.001–0.010)
+  const pctStr = sqi < 0.01 ? sqi.toExponential(2) : (sqi * 100).toFixed(2) + '%';
+  ui.sqiBadge.textContent = `SQI ${pctStr}${tag || ''}`;
   ui.sqiBadge.className = sqi >= SQI_GOOD ? 'good' : sqi >= SQI_WARN ? 'warn' : 'bad';
 }
 
@@ -866,20 +870,24 @@ async function startRecording() {
       }
     },
         onSqiUpdateCb: (sqi, sqiGreen, activeChannel) => {
-      // 1. Log if a swap happened mid-session
+      // 1. Log swap and calibration lock events
       if (activeChannel !== currentActiveChannel && isRecording) {
         const elapsed = ((performance.now() - sessionStartTime) / 1000).toFixed(1);
-        logLine('ev-flag', `[${elapsed}s] SWAP TO ${activeChannel.toUpperCase()}`);
+        logLine('ev-flag', `[${elapsed}s] CHANNEL → ${activeChannel.toUpperCase()}`);
       }
       currentActiveChannel = activeChannel;
-      
-      // 2. Safely store BOTH values so the CSV captures them properly
-      currentSqi = sqi; 
+
+      // 2. Store both values for CSV export
+      currentSqi      = sqi;
       currentSqiGreen = sqiGreen || 0;
-      
-      // 3. Update the UI and tracking stats using ONLY the winner's SQI
+
+      // 3. Update UI: show active channel's SQI + channel indicator in badge
       const displaySqi = activeChannel === 'green' ? currentSqiGreen : currentSqi;
-      handleSqi(displaySqi); 
+      const calPhase   = BeatDetector.getCalPhase ? BeatDetector.getCalPhase() : 'locked';
+      const phaseTag   = calPhase !== 'locked' ? ` [${calPhase}]` : '';
+      const chTag      = activeChannel === 'green' ? ' G' : ' R';
+
+      handleSqi(displaySqi, chTag + phaseTag);
     },
     onDicroticRejectCb: (info) => {
       dicroticList.push(info);
@@ -889,7 +897,7 @@ async function startRecording() {
     },
   });
 
-  logLine('ev-info', `started: ${sid}`);
+  logLine('ev-info', `started: ${sid}  [epat-core v5 — dual-WABP]`);
 }
 
 // ── Stop & export ──
