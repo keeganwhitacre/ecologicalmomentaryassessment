@@ -228,6 +228,15 @@
     const MAX_RECENT_PERIODS = 10;
     let dicroticRejectCount = 0;
 
+    // --- post-switch stabilization ---
+    // when the active channel changes, the new channel's WABP may have a decayed
+    // threshold (Ta→Tm) from running as a quiet backup. it can fire rapidly on noise
+    // before recentPeriods fills enough for the median gate to be meaningful.
+    // switchStabPeriodMs carries the last known good period into evaluateBeat so the
+    // dicrotic gate has a real reference rather than the 800ms default.
+    // it is cleared once recentPeriods reaches DICROTIC_MIN_PERIODS beats.
+    let switchStabPeriodMs = 0;  // 0 = inactive
+
     // --- SQI (filtered peak-to-peak) ---
     // SQI_WINDOW_S: how wide a window to measure pp over. 2s covers ~1–2 full cycles
     // at resting HR, long enough for a reliable pp estimate, short enough to track
@@ -391,6 +400,8 @@
           activeChannel = avgGreen > avgRed ? 'green' : 'red';
           failoverCounter = 0;
           calPhase = 'locked';
+          // recentPeriods is empty at first lock — no prior period to carry forward.
+          // switchStabPeriodMs stays 0 (inactive) until the first actual failover.
           // both WABP instances have been running since t=0; no reset needed.
           // lastBeat times are already initialised.
         }
@@ -407,6 +418,9 @@
             activeChannel = 'green';
             greenBaseline = ppGreen > 0 ? ppGreen : greenBaseline; // re-anchor to current
             failoverCounter = 0;
+            // arm stabilization: use last known period as gate reference until
+            // recentPeriods refills. if averagePeriod is 0 (no beats yet), skip.
+            if (averagePeriod > 0) switchStabPeriodMs = averagePeriod * 1000;
           }
         } else {
           failoverCounter = 0;
@@ -420,6 +434,7 @@
             activeChannel = 'red';
             redBaseline = ppRed > 0 ? ppRed : redBaseline;
             failoverCounter = 0;
+            if (averagePeriod > 0) switchStabPeriodMs = averagePeriod * 1000;
           }
         } else {
           failoverCounter = 0;
@@ -442,11 +457,25 @@
         return { accepted: false, anchor: false };
       }
 
-      // median-anchored dicrotic gate
+      // median-anchored dicrotic gate.
+      // priority: (1) live median once recentPeriods is full enough,
+      //           (2) switchStabPeriodMs — carried from the prior channel on failover,
+      //               active only until recentPeriods reaches DICROTIC_MIN_PERIODS,
+      //           (3) 800ms safe default (75 BPM) while learning the first beats.
+      // the stab seed closes the gap where a threshold-decayed backup WABP can fire
+      // at 500–700ms intervals that pass the 800ms-based default gate (480ms threshold)
+      // but would correctly be blocked by a real period reference (e.g., 560ms gate
+      // at a true 933ms / 65 BPM period).
       const DICROTIC_MIN_PERIODS = 3;
-      const expectedPeriodMs = recentPeriods.length >= DICROTIC_MIN_PERIODS
-        ? getMedian(recentPeriods) * 1000
-        : 800;
+      let expectedPeriodMs;
+      if (recentPeriods.length >= DICROTIC_MIN_PERIODS) {
+        expectedPeriodMs = getMedian(recentPeriods) * 1000;
+        switchStabPeriodMs = 0;  // live data is available; disarm stabilization
+      } else if (switchStabPeriodMs > 0) {
+        expectedPeriodMs = switchStabPeriodMs;
+      } else {
+        expectedPeriodMs = 800;
+      }
 
       if (interval < expectedPeriodMs * 0.60) {
         return { accepted: false, isDicrotic: true, interval, expectedPeriodMs };
@@ -656,6 +685,7 @@
         recentPeriods = []; instantPeriod = 0; averagePeriod = 0;
         lastBeatTimeRed = 0; lastBeatTimeGreen = 0;
         prevAcceptedBeatTime = 0; prevAcceptedIbi = 0;
+        switchStabPeriodMs = 0;
         fingerPresent = false; fingerDebounceCount = 0;
 
         lastSqiTime = 0; currentSqiRed = 0; currentSqiGreen = 0;
