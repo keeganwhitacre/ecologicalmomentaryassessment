@@ -586,6 +586,8 @@ let knobDragging = false, knobCx = 0, knobCy = 0, knobLastAngle = 0;
 let avgPeriod = 0, instPeriod = 0;
 let validationData = {};
 let ibiFlags = [], sqiSeries = [], dicroticList = [], knobTimings = [], toneTs = [];
+  let currentSqiGreen = 0;
+let rawSamples = [];
 
 // ── UI refs ──
 const $ = id => document.getElementById(id);
@@ -794,6 +796,9 @@ async function startRecording() {
   currentSqi = 0; sqiBadSec = 0; lastSqiTime = 0;
   pulseBeepOn = false; knobOn = false; knobValue = 0; knobAngle = 0;
   avgPeriod = 0; instPeriod = 0; torchOn = false;
+  
+  rawSamples = [];
+  currentSqiGreen = 0;
 
   ui.bpmVal.textContent = '--';
   ui.sBeats.textContent = ui.sClean.textContent = ui.sFlagged.textContent = ui.sDic.textContent = ui.sMarkers.textContent = '0';
@@ -842,13 +847,27 @@ async function startRecording() {
       ui.fingerText.textContent = present ? 'Signal found' : 'No signal';
       if (!present) ui.bpmVal.textContent = '--';
     },
-    onPPGSampleCb: (sample) => {
+    onPPGSampleCb: (sample, sampleGreen) => {
       waveBuffer.push(sample);
       if (waveBuffer.length > WAVE_MAX) waveBuffer.shift();
       drawWave();
       drawCam();
+      
+      // ADD THIS: Store the continuous high-res samples
+      if (isRecording) {
+        rawSamples.push({
+          t: performance.now(),
+          r: sample,
+          g: sampleGreen || 0,
+          sqiR: currentSqi,
+          sqiG: currentSqiGreen
+        });
+      }
     },
-    onSqiUpdateCb: handleSqi,
+    onSqiUpdateCb: (sqi, sqiGreen) => {
+      currentSqiGreen = sqiGreen || 0;
+      handleSqi(sqi); // Keeps your existing Red UI logic intact
+    },
     onDicroticRejectCb: (info) => {
       dicroticList.push(info);
       ui.sDic.textContent = dicroticList.length;
@@ -899,6 +918,24 @@ async function stopAndExport() {
   a.click(); URL.revokeObjectURL(url);
 
   logLine('ev-info', `exported: ${validationData.sessionID}`);
+
+  if (rawSamples.length > 0) {
+    let csv = "Time_ms,Red_Filtered,Green_Filtered,Red_SQI,Green_SQI\n";
+    const startT = rawSamples[0].t;
+    
+    for (const s of rawSamples) {
+      // toFixed limits payload size so the browser doesn't choke on massive strings
+      csv += `${Math.round(s.t - startT)},${s.r.toFixed(6)},${s.g.toFixed(6)},${s.sqiR.toFixed(4)},${s.sqiG.toFixed(4)}\n`;
+    }
+    
+    const csvBlob = new Blob([csv], { type: 'text/csv' });
+    const csvUrl = URL.createObjectURL(csvBlob);
+    const aCsv = document.createElement('a');
+    aCsv.href = csvUrl;
+    aCsv.download = `${validationData.sessionID}_RAW_SIGNALS.csv`;
+    aCsv.click();
+    URL.revokeObjectURL(csvUrl);
+  }
 }
 
 // ── Beep toggle ──
