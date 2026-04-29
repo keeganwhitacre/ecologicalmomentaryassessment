@@ -743,6 +743,7 @@
           redBaseline, greenBaseline,
         };
       },
+      getTrack()               { return track; } // Exposed for the validation UI toggleTorch
     };
   })();
 
@@ -801,7 +802,7 @@
         const s = audioCtx.createBufferSource();
         s.buffer = lowBuf; s.connect(audioCtx.destination); s.start();
         lastPlayedPerfNow = now;
-        return { perfNow: now, ctx onCtxState: audioCtx.state };
+        return { perfNow: now, ctxState: audioCtx.state };
       },
       resetSchedulerState() { lastScheduledWhen = 0; lastPlayedPerfNow = 0; },
       getDropLog()  { return dropLog.slice(); },
